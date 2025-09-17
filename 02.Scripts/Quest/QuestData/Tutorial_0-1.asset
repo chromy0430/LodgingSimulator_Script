@@ -10,16 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9f782172bfe9c2243b6422ae3a0c3bc1, type: 3}
-  m_Name: Tutorial_3
+  m_Name: Tutorial_0-1
   m_EditorClassIdentifier: 
-  questName: "\uBCBD\uC744 \uC124\uCE58\uD574!"
-  dialogue: "\uB3C8\uC744 \uBC8C\uC5B4!\n\uD55C 1K \uC815\uB3C4?"
+  questName: "\uD29C\uD1A0\uB9AC\uC5BC-2"
+  dialogue: "Q\uB97C \uB20C\uB7EC \uD018\uC2A4\uD2B8\uCC3D\uC744 \uB744\uC6CC!\n\uADF8\uB9AC\uACE0
+    \uC644\uB8CC \uBC84\uD2BC\uC744 \uB20C\uB7EC!"
   characterImage: {fileID: 2800000, guid: 63f77c37f2ced7f45a65bfb3d6a9e2fa, type: 3}
   requiredDay: 1
-  requiredHour: 13
-  completionType: 2
+  requiredHour: 11
+  requiredMin: 10
+  completionType: 0
   completionTargetID: 0
-  completionAmount: 1000
+  completionAmount: 0
   rewardType: 0
   rewardAmount: 100
   timeLimitInMinutes: 0

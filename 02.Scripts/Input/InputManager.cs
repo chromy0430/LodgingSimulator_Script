@@ -30,6 +30,7 @@ public class InputManager : MonoBehaviour
     public GameObject BuildUI;
     public GameObject SettingUI;
     public GameObject SettingUI2;
+    public GameObject targetObject;
     public GameObject QuestUI;
     public Button     SettingBtn;
 
@@ -38,7 +39,12 @@ public class InputManager : MonoBehaviour
     public bool         isBuildMode = false;
     public bool isDeleteMode = false;
     public bool IsPointerOverUI() => EventSystem.current.IsPointerOverGameObject();
-    
+
+    [Header("DOTween Settings")]
+    public float animationDuration = 0.3f; // 애니메이션 지속 시간
+    public Ease openEase = Ease.OutBack;    // 열릴 때 적용할 Ease
+    public Ease closeEase = Ease.InBack;     // 닫힐 때 적용할 Ease
+
     private void Start()
     {
         InitialBuildUI();
@@ -110,12 +116,41 @@ public class InputManager : MonoBehaviour
         {
             HandleObjectSelection();
         }
+
+        //ActiveInputHelper();
     }
 
     private void OnOffSettingUI()
     {
-        SettingUI.SetActive(!SettingUI.activeSelf);
-        if(SettingUI2.activeSelf) SettingUI2.SetActive(false);
+        // UI가 비활성화 상태일 때 -> 열기
+        if (!SettingUI.activeSelf)
+        {
+            // SettingUI2가 켜져 있다면 먼저 끈다.
+            if (SettingUI2 != null && SettingUI2.activeSelf)
+            {
+                SettingUI2.SetActive(false);
+            }
+
+            // UI를 활성화하고, 시작 크기를 설정한 후 애니메이션 실행
+            SettingUI.SetActive(true);
+            SettingUI.transform.localScale = Vector3.one * 0.1f;
+            SettingUI.transform.DOScale(1f, animationDuration).SetEase(openEase);
+        }
+        // UI가 활성화 상태일 때 -> 닫기
+        else
+        {
+            // 크기 애니메이션을 먼저 실행하고, 애니메이션이 끝나면 비활성화
+            SettingUI.transform.DOScale(0.1f, animationDuration)
+                .SetEase(closeEase)
+                .OnComplete(() =>
+                {
+                    SettingUI.SetActive(false);
+                    SettingUI2.SetActive(false);
+                });
+        }
+
+        //SettingUI.SetActive(!SettingUI.activeSelf);
+        //if(SettingUI2.activeSelf) SettingUI2.SetActive(false);
     }
 
     private void HandleObjectSelection()
@@ -199,6 +234,26 @@ public class InputManager : MonoBehaviour
         if(SettingUI is not null) SettingUI.SetActive(false);
     }
 
+    private void ActiveInputHelper()
+    {
+        if (targetObject == null)
+        {
+            Debug.LogError("Target Object가 할당되지 않았습니다!");
+            return;
+        }
+
+        if (Input.GetKey(KeyCode.F1))
+        {
+            // 타겟 게임 오브젝트를 활성화시킵니다.
+            targetObject.SetActive(true);
+        }
+        // F1 키에서 손을 떼는 순간 true를 반환합니다.
+        else if (Input.GetKeyUp(KeyCode.F1))
+        {
+            // 타겟 게임 오브젝트를 비활성화시킵니다.
+            targetObject.SetActive(false);
+        }
+    }
 
     /// <summary>
     /// BuildUI를 위로 올리는 Dotween 애니메이션 코드

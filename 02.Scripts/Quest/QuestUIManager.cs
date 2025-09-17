@@ -36,7 +36,7 @@ public class QuestUIManager : MonoBehaviour, IBeginDragHandler, IDragHandler, IE
         rect.anchoredPosition = new Vector2(-rect.rect.width, initialPosition.y);
 
         // DOTween을 사용하여 슬라이드 인 애니메이션
-        rect.DOAnchorPosX(initialPosition.x, 0.5f).SetEase(Ease.OutBack);
+        rect.DOAnchorPosX(initialPosition.x, 0.5f).SetEase(Ease.OutBack).SetUpdate(true);
     }
 
     // 퀘스트 UI를 화면 밖으로 사라지게 함
@@ -45,7 +45,7 @@ public class QuestUIManager : MonoBehaviour, IBeginDragHandler, IDragHandler, IE
         RectTransform rect = questPanel.GetComponent<RectTransform>();
         float endPosX = accepted ? rect.rect.width * 2 : -rect.rect.width * 2; // 수락이면 오른쪽, 거절이면 왼쪽
 
-        rect.DOAnchorPosX(endPosX, 0.5f).SetEase(Ease.InBack).OnComplete(() =>
+        rect.DOAnchorPosX(endPosX, 0.5f).SetEase(Ease.InBack).SetUpdate(true).OnComplete(() =>
         {
             questPanel.SetActive(false);
             rect.anchoredPosition = initialPosition; // 다음 퀘스트를 위해 위치 초기화
@@ -108,7 +108,7 @@ public class QuestUIManager : MonoBehaviour, IBeginDragHandler, IDragHandler, IE
         }
         else // 원래 위치로 복귀
         {
-            questPanel.GetComponent<RectTransform>().DOAnchorPos(initialPosition, 0.2f);
+            questPanel.GetComponent<RectTransform>().DOAnchorPos(initialPosition, 0.2f).SetUpdate(true);
         }
     }
 }

@@ -1,8 +1,9 @@
-using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.EventSystems;
-using TMPro;
 using DG.Tweening; // DOTween 사용
+using TMPro;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.Localization;
+using UnityEngine.UI;
 
 public class QuestUIManager : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {

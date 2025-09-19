@@ -56,4 +56,7 @@ public class ObjectData
     
     [field: SerializeField]
     public int ReputationValue { get; set; }
+
+    [field: SerializeField, TextArea(3, 5)]
+    public string Description { get; set; }
 }

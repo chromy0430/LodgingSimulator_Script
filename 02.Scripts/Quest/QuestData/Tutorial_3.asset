@@ -13,7 +13,11 @@ MonoBehaviour:
   m_Name: Tutorial_3
   m_EditorClassIdentifier: 
   questName: "\uB3C8\uC744 \uBC8C\uC5B4!"
+  questName_en: Make money!
   dialogue: "\uB3C8\uC744 \uBC8C\uC5B4!\n\uD55C 1K \uC815\uB3C4?"
+  dialogue_en: 'Make money!
+
+    About 1K?'
   characterImage: {fileID: 2800000, guid: 63f77c37f2ced7f45a65bfb3d6a9e2fa, type: 3}
   requiredDay: 1
   requiredHour: 13

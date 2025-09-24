@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Localization.Settings;
 
 /// <summary>
 /// 건축물들의 데이터를 저장하는 스크립터블오브젝트 
@@ -32,7 +33,10 @@ public class ObjectData
 {
     [field : SerializeField]
     public string Name { get;  set; }
-    
+
+    [field: SerializeField]
+    public string Name_en { get; set; } // 영어 이름
+
     [field : SerializeField]
     public int ID { get;  set; }
 
@@ -59,4 +63,31 @@ public class ObjectData
 
     [field: SerializeField, TextArea(3, 5)]
     public string Description { get; set; }
+
+    [field: SerializeField, TextArea(3, 5)]
+    public string Description_en { get; set; } // 영어 설명
+
+    public string LocalizedName
+    {
+        get
+        {
+            if (LocalizationSettings.SelectedLocale.Identifier.Code == "en")
+            {
+                return Name_en;
+            }
+            return Name;
+        }
+    }
+
+    public string LocalizedDescription
+    {
+        get
+        {
+            if (LocalizationSettings.SelectedLocale.Identifier.Code == "en")
+            {
+                return Description_en;
+            }
+            return Description;
+        }
+    }
 }

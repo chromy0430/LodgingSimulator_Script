@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using DG.Tweening;
-using UnityEngine.UI; // DOTween 사용을 위해 추가
+using UnityEngine.UI;
 
 public class InputManager : MonoBehaviour
 {
@@ -54,26 +54,16 @@ public class InputManager : MonoBehaviour
     
     private void Update()
     {
-        // B키로 건설 상태 토글
+        // B키로 건설모드 시작
         if (Input.GetKeyDown(KeyCode.B) && !IsPointerOverUI())
         {
-            isBuildMode = !isBuildMode;
-            if (isBuildMode)
-            {
-                ShowBuildUI(); // BuildUI 애니메이션 실행
-            }
-            else
-            {
-                HideBuildUI(); // BuildUI 애니메이션 실행
-                placementSystem.ExitBuildMode();
-                OnExit?.Invoke();
-            }
-
-            ChangeFloorForBuildMode();
+            ChangeBuildMode();
         }
 
+        // Q키로 퀘스트 UI 출력
         if (Input.GetKeyDown(KeyCode.Q)) QuestUI.SetActive(!QuestUI.activeSelf);
 
+        // ESC키로 설정 UI 출력
         if(Input.GetKeyDown(KeyCode.Escape))
         {
             OnOffSettingUI();
@@ -85,6 +75,7 @@ public class InputManager : MonoBehaviour
             OnExit?.Invoke();
         }
 
+        // 마우스 좌클릭으로 건설
         if (Input.GetMouseButtonDown(0) && isDeleteMode)
         {
             OnClicked?.Invoke();
@@ -102,13 +93,10 @@ public class InputManager : MonoBehaviour
             OnExit?.Invoke();
         }
 
-        // 기존 코드 유지
+        // 삭제모드 시작
         if (Input.GetKeyDown(KeyCode.L) && isBuildMode)
         {
-            if (isDeleteMode)
-                placementSystem.StopDeleteMode();
-            else
-                placementSystem.StartDeleteMode();
+            ChangeDeleteMode();
         }
 
         // 일반 모드에서 오브젝트 클릭 처리
@@ -116,8 +104,31 @@ public class InputManager : MonoBehaviour
         {
             HandleObjectSelection();
         }
+    }
 
-        //ActiveInputHelper();
+    private void ChangeDeleteMode()
+    {
+        if (isDeleteMode)
+            placementSystem.StopDeleteMode();
+        else
+            placementSystem.StartDeleteMode();
+    }
+
+    private void ChangeBuildMode()
+    {
+        isBuildMode = !isBuildMode;
+        if (isBuildMode)
+        {
+            ShowBuildUI(); // BuildUI 애니메이션 실행
+        }
+        else
+        {
+            HideBuildUI(); // BuildUI 애니메이션 실행
+            placementSystem.ExitBuildMode();
+            OnExit?.Invoke();
+        }
+
+        ChangeFloorForBuildMode();
     }
 
     private void OnOffSettingUI()
@@ -324,7 +335,6 @@ public class InputManager : MonoBehaviour
         mousePos.z = cam.nearClipPlane;
         
         Ray ray = cam.ScreenPointToRay(mousePos);
-        //RaycastHit hit;
         if (Physics.Raycast(ray, out hit, 90, placementLayermask))
         {
             lastPosition = hit.point;

@@ -13,8 +13,13 @@ MonoBehaviour:
   m_Name: Tutorial_0
   m_EditorClassIdentifier: 
   questName: "\uD29C\uD1A0\uB9AC\uC5BC-1"
+  questName_en: Tutorial-1
   dialogue: "\uD018\uC2A4\uD2B8\uB97C \uC218\uB77D\uD558\uB824\uBA74 \uC624\uB978\uCABD\uC73C\uB85C
     \uB2F9\uACA8!\n\uAC70\uC808\uD560\uAEBC\uBA74 \uC67C\uCABD\uC73C\uB85C \uB2F9\uACA8!"
+  dialogue_en: 'Pull to the right to accept the quest!
+
+    If you''re going to
+    refuse, pull to the left!'
   characterImage: {fileID: 2800000, guid: 63f77c37f2ced7f45a65bfb3d6a9e2fa, type: 3}
   requiredDay: 1
   requiredHour: 11

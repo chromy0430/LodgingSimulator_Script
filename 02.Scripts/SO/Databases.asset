@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: Databases
   m_EditorClassIdentifier: 
   objectsData:
-  - <Name>k__BackingField: "\uB098\uBB34\uD0C0\uC77C"
+  - <Name>k__BackingField: "\uB098\uBB34\uBC14\uB2E5"
+    <Name_en>k__BackingField: WoodenFloor
     <ID>k__BackingField: 0
     <kindIndex>k__BackingField: 0
     IsWall: 0
@@ -22,8 +23,11 @@ MonoBehaviour:
     <BuildPrice>k__BackingField: 10
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 0
-    <Description>k__BackingField: "\uB098\uBB34\uB85C \uB9CC\uB4E0 \uBC14\uB2E5 \uC785\uB2C8\uB2E4."
+    <Description>k__BackingField: "\uB098\uBB34\uB85C \uB9CC\uB4E4\uC5B4\uC9C4 \uBC14\uB2E5
+      \uC785\uB2C8\uB2E4."
+    <Description_en>k__BackingField: The Floor is made of wood.
   - <Name>k__BackingField: Parasol_Blue
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 1
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -33,7 +37,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 5
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: Parasol_Green
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 2
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -43,7 +49,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 5
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: Parasol_Red
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 3
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -53,7 +61,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 5
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: "\uBCBD"
+    <Name_en>k__BackingField: Wall
     <ID>k__BackingField: 4
     <kindIndex>k__BackingField: 2
     IsWall: 1
@@ -63,7 +73,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: "\uB2E8\uB2E8\uD55C \uCF58\uD06C\uB9AC\uD2B8 \uBCBD\uC774\uB2E4."
+    <Description_en>k__BackingField: It's a hard concrete wall.
   - <Name>k__BackingField: "\uBCBD-\uB098\uBB34\uBB38"
+    <Name_en>k__BackingField: Wall-Wood Door
     <ID>k__BackingField: 5
     <kindIndex>k__BackingField: 2
     IsWall: 1
@@ -73,7 +85,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: "\uB098\uBB34 \uBB38\uC774 \uB2EC\uB9B0 \uBCBD\uC774\uB2E4."
+    <Description_en>k__BackingField: It is a wall with a wooden door.
   - <Name>k__BackingField: "\uBCBD-\uC720\uB9AC\uBB38"
+    <Name_en>k__BackingField: Wall-Glass Door
     <ID>k__BackingField: 6
     <kindIndex>k__BackingField: 2
     IsWall: 1
@@ -83,7 +97,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: "\uC720\uB9AC \uBB38\uC774 \uB2EC\uB9B0 \uBCBD\uC774\uB2E4."
+    <Description_en>k__BackingField: It is a wall with a glass door.
   - <Name>k__BackingField: Counter
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 7
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -93,7 +109,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: "\uD479\uC2E0\uD55C\uB7EC\uADF8"
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 8
     <kindIndex>k__BackingField: 3
     IsWall: 0
@@ -104,7 +122,9 @@ MonoBehaviour:
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: "\uD479\uC2E0\uD574\uBCF4\uC774\uB294 \uB7EC\uADF8
       \uC785\uB2C8\uB2E4."
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: "\uBEE3\uBEE3\uD55C\uB7EC\uADF8"
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 9
     <kindIndex>k__BackingField: 3
     IsWall: 0
@@ -115,7 +135,9 @@ MonoBehaviour:
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: "\uBEE3\uBEE3\uD574\uBCF4\uC774\uB294 \uB7EC\uADF8
       \uC785\uB2C8\uB2E4."
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: "\uBCBD-\uCC3D\uBB38"
+    <Name_en>k__BackingField: Wall-Window
     <ID>k__BackingField: 10
     <kindIndex>k__BackingField: 2
     IsWall: 1
@@ -125,7 +147,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: "\uCC3D\uBB38\uC774 \uB2EC\uB9B0 \uBCBD\uC774\uB2E4."
+    <Description_en>k__BackingField: It's a wall with windows.
   - <Name>k__BackingField: Bed
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 11
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -135,7 +159,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 10
     <ReputationValue>k__BackingField: 3
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: TableTop
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 12
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -145,7 +171,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: Stair
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 13
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -155,7 +183,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: GasStove
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 14
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -165,7 +195,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: PickupTable
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 15
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -175,7 +207,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: BigBed
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 16
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -185,7 +219,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 25
     <ReputationValue>k__BackingField: 10
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: Table_1
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 17
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -195,7 +231,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: Table_2
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 18
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -205,7 +243,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: "\uB300\uB9AC\uC11D\uD0C0\uC77C"
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 19
     <kindIndex>k__BackingField: 0
     IsWall: 0
@@ -216,7 +256,9 @@ MonoBehaviour:
     <ReputationValue>k__BackingField: 0
     <Description>k__BackingField: "\uB300\uB9AC\uC11D\uC73C\uB85C \uC774\uB8E8\uC5B4\uC9C4
       \uBC14\uB2E5 \uC785\uB2C8\uB2E4."
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: BathTub
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 20
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -226,7 +268,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: ShowerBooth
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 21
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -236,7 +280,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: "\uACE0\uAE09\uD0C0\uC77C"
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 22
     <kindIndex>k__BackingField: 0
     IsWall: 0
@@ -246,7 +292,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 0
     <Description>k__BackingField: "\uACE0\uAE09\uC2A4\uB7EC\uC6B4 \uBC14\uB2E5 \uC785\uB2C8\uB2E4."
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: "\uB2E4\uB2E4\uBBF8\uD0C0\uC77C"
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 23
     <kindIndex>k__BackingField: 0
     IsWall: 0
@@ -257,7 +305,9 @@ MonoBehaviour:
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: "\uB2E4\uB2E4\uBBF8\uB85C \uC774\uB8E8\uC5B4\uC9C4
       \uBC14\uB2E5 \uC785\uB2C8\uB2E4."
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: BigBathtub
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 24
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -267,7 +317,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 50
     <ReputationValue>k__BackingField: 10
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: CoffeeShop
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 25
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -277,7 +329,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: Lounge
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 26
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -287,7 +341,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: WeddingHall
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 27
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -297,7 +353,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: BanquetHall
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 28
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -307,7 +365,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 20
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: BathHouse
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 29
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -317,7 +377,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 30
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: FitnessCenter
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 30
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -327,7 +389,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 30
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: JjimJilBang
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 31
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -337,7 +401,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 30
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: FineDining
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 32
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -347,7 +413,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 50
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: FounTain
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 33
     <kindIndex>k__BackingField: 1
     IsWall: 0
@@ -357,7 +425,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 30
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: "\uB098\uBB34"
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 34
     <kindIndex>k__BackingField: 3
     IsWall: 0
@@ -368,7 +438,9 @@ MonoBehaviour:
     <ReputationValue>k__BackingField: 0
     <Description>k__BackingField: "\uC6B8\uCC3D\uD55C \uC78E\uC0AC\uADC0\uB97C \uC9C0\uB2CC
       \uB098\uBB34\uC785\uB2C8\uB2E4."
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: "\uC794\uB514_1"
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 35
     <kindIndex>k__BackingField: 3
     IsWall: 0
@@ -378,7 +450,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: "\uC77C\uC790\uB85C \uC815\uB3C8\uB41C \uC794\uB514\uC785\uB2C8\uB2E4."
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: Grass_1
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 36
     <kindIndex>k__BackingField: 3
     IsWall: 0
@@ -388,7 +462,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 0
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: Grass_2
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 37
     <kindIndex>k__BackingField: 3
     IsWall: 0
@@ -398,7 +474,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: Grass_3
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 38
     <kindIndex>k__BackingField: 3
     IsWall: 0
@@ -408,7 +486,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: Grass_4
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 39
     <kindIndex>k__BackingField: 3
     IsWall: 0
@@ -418,7 +498,9 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 
   - <Name>k__BackingField: Grass_5
+    <Name_en>k__BackingField: 
     <ID>k__BackingField: 40
     <kindIndex>k__BackingField: 3
     IsWall: 0
@@ -428,3 +510,4 @@ MonoBehaviour:
     <BasePrice>k__BackingField: 0
     <ReputationValue>k__BackingField: 1
     <Description>k__BackingField: 
+    <Description_en>k__BackingField: 

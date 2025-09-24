@@ -22,8 +22,12 @@ public class QuestData : ScriptableObject
 {
     [Header("퀘스트 기본 정보")]
     public string questName; // 퀘스트 이름
+    public string questName_en; // 영어 퀘스트 이름
     [TextArea(3, 10)]
     public string dialogue; // 퀘스트 대화 내용
+    [TextArea(3, 10)]
+    public string dialogue_en; // 영어 퀘스트 내용
+
     public Texture2D characterImage; // 퀘스트를 주는 인물 이미지
 
     [Header("퀘스트 발생 조건")]

@@ -12,6 +12,7 @@ public class ObjectDatabaseEditor : Editor
     private int selectedTab = 0;
     private int newObjectKindIndex = 0; // This variable is not used but kept for consistency
     private string newObjectName = "";
+    private string newObjectName_en = ""; // 영어 이름
     private Vector2Int newObjectSize = Vector2Int.one;
     private GameObject newObjectPrefab = null;
     private int newObjectBuildPrice = 0;
@@ -21,6 +22,7 @@ public class ObjectDatabaseEditor : Editor
     private Dictionary<ObjectData, bool> foldoutStates = new Dictionary<ObjectData, bool>();
 
     private string newObjectDescription = "";
+    private string newObjectDescription_en = ""; // 영어 설명
 
     private void OnEnable()
     {
@@ -44,7 +46,8 @@ public class ObjectDatabaseEditor : Editor
         // Add new object section
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("새 데이터 추가", EditorStyles.boldLabel); // Changed label for clarity
-        newObjectName = EditorGUILayout.TextField("이름", newObjectName);
+        newObjectName = EditorGUILayout.TextField("이름 (한국어)", newObjectName);
+        newObjectName_en = EditorGUILayout.TextField("이름 (영어)", newObjectName_en);
         EditorGUILayout.LabelField("종류", tabNames[selectedTab]); // Displays the currently selected tab's name
         newObjectSize = EditorGUILayout.Vector2IntField("크기", newObjectSize);
         newObjectPrefab = (GameObject)EditorGUILayout.ObjectField("프리팹", newObjectPrefab, typeof(GameObject), false);
@@ -52,8 +55,11 @@ public class ObjectDatabaseEditor : Editor
         newObjectBasePrice = EditorGUILayout.IntField("기본 가격", newObjectBasePrice);
         newObjectIsWall = EditorGUILayout.Toggle("벽 or Not", newObjectIsWall);
         newObjectReputation = EditorGUILayout.IntField("명성도", newObjectReputation);
-        EditorGUILayout.LabelField("설명 (Tooltip)");
+        EditorGUILayout.LabelField("설명 (Tooltip - 한국어)");
         newObjectDescription = EditorGUILayout.TextArea(newObjectDescription, GUILayout.Height(60));
+        EditorGUILayout.LabelField("설명 (Tooltip - 영어)");
+        newObjectDescription_en = EditorGUILayout.TextArea(newObjectDescription_en, GUILayout.Height(60));
+
 
 
         if (GUILayout.Button("새 데이터 추가")) // Changed button text for clarity
@@ -64,6 +70,7 @@ public class ObjectDatabaseEditor : Editor
             var newObject = new ObjectData
             {
                 Name = newObjectName,
+                Name_en = newObjectName_en,
                 ID = newID,
                 kindIndex = selectedTab,
                 Size = newObjectSize,
@@ -72,7 +79,8 @@ public class ObjectDatabaseEditor : Editor
                 BasePrice = newObjectBasePrice,
                 IsWall = newObjectIsWall,
                 ReputationValue = newObjectReputation,
-                Description = newObjectDescription
+                Description = newObjectDescription,
+                Description_en = newObjectDescription_en
             };
             database.objectsData.Add(newObject);
             foldoutStates[newObject] = false; // Set foldout state for the new object
@@ -82,6 +90,7 @@ public class ObjectDatabaseEditor : Editor
 
             // Clear input fields after adding
             newObjectName = "";
+            newObjectName_en = "";
             newObjectSize = Vector2Int.one;
             newObjectPrefab = null;
             newObjectBuildPrice = 0;
@@ -89,6 +98,7 @@ public class ObjectDatabaseEditor : Editor
             newObjectIsWall = false;
             newObjectReputation = 1;
             newObjectDescription = "";
+            newObjectDescription_en = "";
         }
 
         EditorGUILayout.Space();
@@ -127,15 +137,18 @@ public class ObjectDatabaseEditor : Editor
                 // Display and allow modification of object properties
                 // We don't allow changing ID or kindIndex here as they are foundational
                 EditorGUILayout.LabelField("ID", obj.ID.ToString()); // Display ID but don't allow editing
-                obj.Name = EditorGUILayout.TextField("이름", obj.Name); // Allow name editing
+                obj.Name = EditorGUILayout.TextField("이름 (한국어)", obj.Name);
+                obj.Name_en = EditorGUILayout.TextField("이름 (영어)", obj.Name_en);
                 obj.Size = EditorGUILayout.Vector2IntField("크기", obj.Size);
                 obj.Prefab = (GameObject)EditorGUILayout.ObjectField("프리팹", obj.Prefab, typeof(GameObject), false);
                 obj.BuildPrice = EditorGUILayout.IntField("건축 가격", obj.BuildPrice);
                 obj.BasePrice = EditorGUILayout.IntField("기본 가격", obj.BasePrice);
                 obj.IsWall = EditorGUILayout.Toggle("벽 or Not", obj.IsWall);
                 obj.ReputationValue = EditorGUILayout.IntField("명성도", obj.ReputationValue);
-                EditorGUILayout.LabelField("설명 (Tooltip)");
+                EditorGUILayout.LabelField("설명 (Tooltip - 한국어)");
                 obj.Description = EditorGUILayout.TextArea(obj.Description, GUILayout.Height(60));
+                EditorGUILayout.LabelField("설명 (Tooltip - 영어)");
+                obj.Description_en = EditorGUILayout.TextArea(obj.Description_en, GUILayout.Height(60));
 
                 // --- Modification Button ---
                 if (GUILayout.Button("수정 (Modify)"))

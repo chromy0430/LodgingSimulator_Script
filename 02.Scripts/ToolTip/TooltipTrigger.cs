@@ -14,9 +14,9 @@ public class TooltipTrigger : MonoBehaviour, IPointerEnterHandler, IPointerExitH
         ObjectData data = database.GetObjectData(objectID);
         if (data != null)
         {
-            // 툴팁에 표시할 내용을 조합합니다.
-            string content = $"<b>{data.Name}</b>\n";                             
-            string content2 = $"{data.Description}";
+            // 툴팁에 표시할 내용을 조합
+            string content = $"<b>{data.LocalizedName}</b>\n";
+            string content2 = $"{data.LocalizedDescription}";
             TooltipManager.instance.ShowTooltip(content, content2);
         }
     }

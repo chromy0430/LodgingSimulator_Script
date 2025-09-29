@@ -10,7 +10,7 @@ public class ObjectDatabaseEditor : Editor
     private ObjectsDatabaseSO database;
     private Vector2 scrollPos;
     private int selectedTab = 0;
-    private int newObjectKindIndex = 0; // This variable is not used but kept for consistency
+    //private int newObjectKindIndex = 0; // This variable is not used but kept for consistency
     private string newObjectName = "";
     private string newObjectName_en = ""; // 영어 이름
     private Vector2Int newObjectSize = Vector2Int.one;

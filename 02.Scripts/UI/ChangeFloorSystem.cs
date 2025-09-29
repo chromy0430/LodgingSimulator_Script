@@ -1,4 +1,7 @@
+using System.Collections;
+using TMPro;
 using UnityEngine;
+using UnityEngine.Localization.Settings;
 
 public class ChangeFloorSystem : MonoBehaviour
 {
@@ -10,12 +13,21 @@ public class ChangeFloorSystem : MonoBehaviour
     [SerializeField] private Camera mainCamera;
     
     public int currentFloor = 1;
-    
-    // 층 변경 메서드 (파라미터 없이 currentFloor 사용)
+
+    [SerializeField] private TextMeshProUGUI floorText;
+
+    public void Init()
+    {
+        StartCoroutine(UpdateFloorTextCoroutine(currentFloor));
+    }
+
+    /// <summary>
+    /// 층 변경 메서드 (파라미터 없이 currentFloor 사용)
+    /// </summary>
     private void ChangeFloor()
     {
         // 층 범위 제한
-        currentFloor = Mathf.Clamp(currentFloor, 1, 4);
+        currentFloor = Mathf.Clamp(currentFloor, 1, 6);
 
         Vector3 newCellSize = grid.cellSize;
 
@@ -35,16 +47,24 @@ public class ChangeFloorSystem : MonoBehaviour
                 break;
             case 4:
                 newCellSize.y = 1.7f; //5.781f; // 1.927 * 3 (예상값, 필요 시 조정) 
-                cameraCon.SetOffset(40);
-                
+                cameraCon.SetOffset(40);                
+                break;
+            case 5:
+                newCellSize.y = 1.168f;
+                cameraCon.SetOffset(45);
+                break;
+            case 6:
+                newCellSize.y = 0.74f;
+                cameraCon.SetOffset(50);
                 break;
         }
         
         // 카메라 컬링 마스크 업데이트
         UpdateCameraCullingMask();
-
         OnBuildModeChanged();
         grid.cellSize = newCellSize;
+
+        StartCoroutine(UpdateFloorTextCoroutine(currentFloor));
     }
 
     // 카메라 컬링 마스크 설정: 현재 층과 그 아래 모든 층 표시
@@ -60,7 +80,7 @@ public class ChangeFloorSystem : MonoBehaviour
         int cullingMask = mainCamera.cullingMask;
 
         // 모든 층 레이어 비우기
-        for (int i = 1; i <= 4; i++)
+        for (int i = 1; i <= 6; i++)
         {
             int layer = LayerMask.NameToLayer($"{i}F");
             if (layer != -1)
@@ -116,5 +136,19 @@ public class ChangeFloorSystem : MonoBehaviour
     public void OnBuildModeChanged()
     {
         CheckBuildMode();
+    }
+
+    /// <summary>
+    /// 로컬라이제이션 초기화를 기다린 후 층수 텍스트를 업데이트하는 코루틴
+    /// </summary>
+    private IEnumerator UpdateFloorTextCoroutine(int curFloor)
+    {
+        // 로컬라이제이션 시스템이 준비될 때까지 한 프레임 대기
+        yield return LocalizationSettings.InitializationOperation;
+
+        // 준비가 완료되면 현지화된 문자열을 가져옴
+        string localizedString = LocalizationSettings.StringDatabase.GetLocalizedString("Locales", "Ingame_FloorCount", new object[] { curFloor });
+        floorText.text = localizedString;
+        Debug.Log($"Floor Text Updated: {localizedString}");
     }
 }

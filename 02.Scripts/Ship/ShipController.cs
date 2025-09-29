@@ -16,9 +16,8 @@ namespace JY
         [Header("이동 설정")]
         [SerializeField] private float currentSpeed = 0f;
         [SerializeField] private int currentWaypointIndex = 0;
-        [SerializeField] private float waypointReachDistance = 2f;
         [SerializeField] private bool hasCompletedRoute = false;
-        
+
         [Header("디버그 설정")]
         [Tooltip("디버그 로그 표시 여부")]
         [SerializeField] private bool showDebugLogs = false;
@@ -37,7 +36,8 @@ namespace JY
         private Vector3 targetPosition;
         private Quaternion targetRotation;
         private Coroutine movementCoroutine;
-        
+        private float shipYPosition;
+
         // 상태 속성
         public ShipState CurrentState => currentState;
         public string ShipId => shipId;
@@ -70,8 +70,14 @@ namespace JY
             if (route.waypoints.Count > 0 && route.waypoints[0] != null)
             {
                 Vector3 startPos = route.GetWaypointPosition(0);
-                transform.position = new Vector3(startPos.x, 0.5f, startPos.z); // 바닥에서 약간 위로
-                
+                //transform.position = new Vector3(startPos.x, 0.5f, startPos.z); // 바닥에서 약간 위로
+                transform.position = startPos;
+
+                shipYPosition = transform.position.y;
+                Vector3 currentPos = transform.position;
+                currentPos.y = shipYPosition;
+                transform.position = currentPos;
+
                 // 두 번째 웨이포인트 방향으로 회전
                 if (route.waypoints.Count > 1 && route.waypoints[1] != null)
                 {
@@ -198,6 +204,7 @@ namespace JY
             }
             
             Vector3 destination = waypoint.position;
+            destination.y = shipYPosition;
             Vector3 direction = (destination - transform.position).normalized;
             Quaternion targetRotation = direction != Vector3.zero ? Quaternion.LookRotation(direction) : transform.rotation;
             
@@ -235,7 +242,7 @@ namespace JY
                 
                 // 위치 보간
                 Vector3 currentPos = Vector3.Lerp(startPosition, destination, smoothProgress);
-                currentPos.y = 0.5f; // 바닥에서 약간 위로 유지
+                //currentPos.y = 0.5f; // 바닥에서 약간 위로 유지
                 transform.position = currentPos;
                 
                 // 회전 보간
@@ -246,10 +253,13 @@ namespace JY
                 
                 yield return null;
             }
-            
+
             // 최종 위치 및 회전 설정
-            destination.y = 0.5f;
+            //destination.y = 0.5f;
+            //transform.position = destination;
+            destination.y = shipYPosition;
             transform.position = destination;
+
             transform.rotation = rotation;
             currentSpeed = 0f;
             
@@ -285,6 +295,9 @@ namespace JY
             }
             
             Vector3 dockingPosition = assignedRoute.dockingPoint.position;
+
+            dockingPosition.y = shipYPosition;
+
             Vector3 direction = (dockingPosition - transform.position).normalized;
             Quaternion dockingRotation = direction != Vector3.zero ? Quaternion.LookRotation(direction) : transform.rotation;
             
@@ -384,8 +397,10 @@ namespace JY
                 }
                 
                 Vector3 exitPosition = currentPos + exitDirection * 10f; // 10 유닛 멀리
-                exitPosition.y = 0.5f;
-                
+                //exitPosition.y = 0.5f;
+                exitPosition.y = shipYPosition;
+
+
                 DebugLog($"기본 출발 지점으로 이동: {exitDirection}", true);
                 
                 // 출발 지점으로 이동
@@ -409,6 +424,9 @@ namespace JY
                 }
                 
                 Vector3 destination = departureWaypoint.position;
+
+                destination.y = shipYPosition;
+
                 Vector3 direction = (destination - transform.position).normalized;
                 Quaternion targetRotation = direction != Vector3.zero ? Quaternion.LookRotation(direction) : transform.rotation;
                 

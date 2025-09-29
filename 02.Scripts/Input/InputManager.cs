@@ -54,6 +54,21 @@ public class InputManager : MonoBehaviour
     
     private void Update()
     {
+        if (Input.GetKeyDown(KeyCode.Alpha1))
+        {
+            Time.timeScale = 0.1f;
+        }
+
+        if (Input.GetKeyDown(KeyCode.Alpha2))
+        {
+            Time.timeScale = 0.3f;
+        }
+
+        if (Input.GetKeyDown(KeyCode.Alpha3))
+        {
+            Time.timeScale = 0.5f;
+        }
+
         // B키로 건설모드 시작
         if (Input.GetKeyDown(KeyCode.B) && !IsPointerOverUI())
         {

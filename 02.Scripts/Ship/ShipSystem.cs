@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using DG.Tweening;
 
 namespace JY
 {
@@ -15,10 +16,10 @@ namespace JY
         [SerializeField] private bool enableShipSystem = true;
         [SerializeField] private GameObject shipPrefab;
         [SerializeField] private int maxShipCount = 5; // 최대 배 개수
-        
+        [SerializeField] private Transform shipPos;
+
         [Header("시간 설정")]
         [SerializeField] private float spawnTimeBeforeArrival = 5f; // 도착 5분 전 스폰 (분)
-        [SerializeField] private float dockingDuration = 30f; // 정박 시간 (분)
         
         [Header("루트 설정")]
         [SerializeField] private List<ShipRoute> shipRoutes = new List<ShipRoute>();
@@ -44,8 +45,6 @@ namespace JY
         
         // 이벤트
         public event Action<ShipController> OnShipSpawned;
-        public event Action<ShipController> OnShipDocked;
-        public event Action<ShipController> OnShipDeparted;
         
         private void Awake()
         {
@@ -77,6 +76,7 @@ namespace JY
             if (shipPool == null)
             {
                 shipPool = gameObject.AddComponent<ShipObjectPool>();
+                shipPool.FirstShipPos = shipPos.position;
             }
             shipPool.Initialize(shipPrefab, maxShipCount);
             
@@ -89,7 +89,7 @@ namespace JY
         private void SetupTimeSystemConnection()
         {
             // TimeSystem 찾기
-            timeSystem = FindObjectOfType<TimeSystem>();
+            timeSystem = FindFirstObjectByType<TimeSystem>();
             if (timeSystem == null)
             {
                 DebugLog("TimeSystem을 찾을 수 없습니다!", true);
@@ -106,7 +106,7 @@ namespace JY
         private void SetupAISpawnerConnection()
         {
             // AISpawner 찾기
-            aiSpawner = FindObjectOfType<AISpawner>();
+            aiSpawner = FindFirstObjectByType<AISpawner>();
             if (aiSpawner == null)
             {
                 DebugLog("AISpawner를 찾을 수 없습니다!", true);
@@ -140,8 +140,33 @@ namespace JY
                     route.arrivalTime = aiSpawnTime;
                     
                     var schedule = new ShipSchedule(route);
+                    
+                    // 초기 스케줄 날짜 설정
+                    if (timeSystem != null)
+                    {
+                        int currentDay = timeSystem.CurrentDay;
+                        float currentTimeInMinutes = timeSystem.GetCurrentTimeInMinutes();
+                        
+                        // 오늘 시간이 지났으면 내일로 스케줄
+                        if (aiSpawnTime <= currentTimeInMinutes)
+                        {
+                            schedule.scheduledDay = currentDay + 1;
+                            DebugLog($"초기 스케줄: {route.routeId} 내일 {aiSpawnTime/60:F0}시 예정 (현재: {currentDay}일)", true);
+                        }
+                        else
+                        {
+                            schedule.scheduledDay = currentDay;
+                            DebugLog($"초기 스케줄: {route.routeId} 오늘 {aiSpawnTime/60:F0}시 예정 (현재: {currentDay}일)", true);
+                        }
+                    }
+                    else
+                    {
+                        schedule.scheduledDay = 1; // 기본값
+                        DebugLog($"초기 스케줄: {route.routeId} 1일차 {aiSpawnTime/60:F0}시 예정 (TimeSystem 없음)", true);
+                    }
+                    
                     shipSchedules[route.routeId] = schedule;
-                    DebugLog($"배 스케줄 생성: {route.routeId} (도착 시간: {aiSpawnTime}분)", showImportantLogsOnly);
+                    DebugLog($"배 스케줄 생성: {route.routeId} (도착 시간: {aiSpawnTime}분, 날짜: {schedule.scheduledDay}일)", showImportantLogsOnly);
                 }
             }
             
@@ -207,8 +232,34 @@ namespace JY
         /// </summary>
         private bool ShouldSpawnShip(ShipSchedule schedule, float currentTime)
         {
+            // 날짜 검증 - 스케줄된 날짜가 되었거나 지났으면 스폰 가능
+            if (timeSystem != null && schedule.scheduledDay > 0)
+            {
+                int currentDay = timeSystem.CurrentDay;
+                if (currentDay < schedule.scheduledDay)
+                {
+                    DebugLog($"스케줄 대기: {schedule.route.routeId} (현재: {currentDay}일, 예정: {schedule.scheduledDay}일)", false);
+                    return false; // 아직 스케줄된 날짜가 아님
+                }
+                
+                // 스케줄된 날짜가 지났으면 스케줄 업데이트
+                if (currentDay > schedule.scheduledDay)
+                {
+                    DebugLog($"스케줄 날짜 지남 - 업데이트: {schedule.route.routeId} (현재: {currentDay}일, 이전: {schedule.scheduledDay}일)", true);
+                    ResetAndUpdateSchedule(schedule);
+                    return false; // 업데이트 후 다음 프레임에 다시 체크
+                }
+            }
+            
             float spawnTime = schedule.arrivalTime - spawnTimeBeforeArrival;
-            return currentTime >= spawnTime && currentTime < schedule.arrivalTime;
+            bool shouldSpawn = currentTime >= spawnTime && currentTime < schedule.arrivalTime;
+            
+            if (shouldSpawn)
+            {
+                DebugLog($"배 스폰 조건 충족: {schedule.route.routeId} (현재: {currentTime:F1}분, 스폰시간: {spawnTime:F1}분)", true);
+            }
+            
+            return shouldSpawn;
         }
         
         /// <summary>
@@ -259,7 +310,29 @@ namespace JY
             schedule.route.arrivalTime = nextAISpawnTime;
             schedule.arrivalTime = nextAISpawnTime;
             
-            DebugLog($"스케줄 업데이트: {schedule.route.routeId} (다음 도착 시간: {nextAISpawnTime}분)", showImportantLogsOnly);
+            // 현재 날짜 또는 다음 날짜로 스케줄 설정
+            if (timeSystem != null)
+            {
+                int currentDay = timeSystem.CurrentDay;
+                float currentTimeInMinutes = timeSystem.GetCurrentTimeInMinutes();
+                
+                // 오늘 시간이 지났으면 내일로 스케줄
+                if (nextAISpawnTime <= currentTimeInMinutes)
+                {
+                    schedule.scheduledDay = currentDay + 1;
+                    DebugLog($"스케줄 업데이트: {schedule.route.routeId} (내일 {nextAISpawnTime}분 도착 예정)", showImportantLogsOnly);
+                }
+                else
+                {
+                    schedule.scheduledDay = currentDay;
+                    DebugLog($"스케줄 업데이트: {schedule.route.routeId} (오늘 {nextAISpawnTime}분 도착 예정)", showImportantLogsOnly);
+                }
+            }
+            else
+            {
+                schedule.scheduledDay = 1; // 기본값
+                DebugLog($"스케줄 업데이트: {schedule.route.routeId} (다음 도착 시간: {nextAISpawnTime}분)", showImportantLogsOnly);
+            }
         }
         
         /// <summary>
@@ -346,8 +419,6 @@ namespace JY
         {
             // 이벤트 정리
             OnShipSpawned = null;
-            OnShipDocked = null;
-            OnShipDeparted = null;
         }
     }
     
@@ -358,7 +429,8 @@ namespace JY
     public class ShipSchedule
     {
         public ShipRoute route;
-        public float arrivalTime; // 게임 시간 (분)
+        public float arrivalTime; // 게임 시간 (분, 하루 기준 0-1440)
+        public int scheduledDay; // 스케줄된 날짜
         public bool isShipSpawned;
         public ShipController shipController;
         
@@ -366,6 +438,7 @@ namespace JY
         {
             route = shipRoute;
             arrivalTime = shipRoute.arrivalTime;
+            scheduledDay = -1; // 초기값: 날짜 미설정
             isShipSpawned = false;
             shipController = null;
         }
@@ -377,6 +450,7 @@ namespace JY
         {
             isShipSpawned = false;
             shipController = null;
+            // scheduledDay는 리셋하지 않음 (다음 업데이트에서 설정됨)
         }
     }
 }

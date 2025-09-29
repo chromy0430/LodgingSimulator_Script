@@ -12,6 +12,10 @@ public class EscUI : MonoBehaviour
     [SerializeField] private Button m_CheckNoButton;
 
     [SerializeField] private GameObject SettingUI;
+
+    [SerializeField] private Button btn_StatisticUI;
+    [SerializeField] private GameObject m_StatisticUI;
+
     private void Start()
     {
         if (PreExitUI != null)
@@ -24,6 +28,7 @@ public class EscUI : MonoBehaviour
 
         m_CheckYesButton.onClick.AddListener(Btn_CheckedExit);
         m_CheckNoButton.onClick.AddListener(Btn_CheckedNo);
+        btn_StatisticUI.onClick.AddListener(Btn_StatisticUI);
     }
 
     private void Btn_Save()
@@ -49,5 +54,10 @@ public class EscUI : MonoBehaviour
     private void Btn_CheckedExit()
     {
         Application.Quit();
+    }
+
+    private void Btn_StatisticUI()
+    {
+        m_StatisticUI.SetActive(!m_StatisticUI.activeSelf);
     }
 }

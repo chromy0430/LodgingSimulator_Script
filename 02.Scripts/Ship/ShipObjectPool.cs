@@ -17,6 +17,9 @@ namespace JY
         [SerializeField] private bool expandPool = true; // 풀 크기 자동 확장
         [SerializeField] private Transform poolParent; // 풀 오브젝트들의 부모
         
+        public Vector3 FirstShipPos; 
+
+
         [Header("Debug")]
         [SerializeField] private bool showDebugLogs = true;
         
@@ -116,7 +119,7 @@ namespace JY
             // 비활성화 및 풀로 반환
             ship.SetActive(false);
             ship.transform.SetParent(poolParent);
-            ship.transform.position = Vector3.zero;
+            //ship.transform.position = Vector3.zero;
             ship.transform.rotation = Quaternion.identity;
             
             activeShips.Remove(ship);
@@ -223,7 +226,13 @@ namespace JY
                 return null;
             }
             
+             
+
             GameObject newShip = Instantiate(shipPrefab, poolParent);
+            
+            FirstShipPos.y = newShip.transform.localPosition.y;
+            newShip.transform.position = FirstShipPos;
+
             newShip.name = $"Ship_{allShips.Count:D3}";
             newShip.SetActive(false);
             

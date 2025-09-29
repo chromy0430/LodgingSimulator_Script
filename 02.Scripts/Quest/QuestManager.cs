@@ -31,13 +31,15 @@ public class QuestManager : MonoBehaviour
 {
     public static QuestManager Instance { get; private set; }
 
-    public List<QuestData> allQuests; // 모든 퀘스트 데이터 리스트
-    private List<QuestData> availableQuests = new List<QuestData>(); // 현재 발생 가능한 퀘스트 리스트
-    private QuestData currentQuest; // 현재 플레이어에게 제시된 퀘스트
-    public List<ActiveQuest> activeQuests = new List<ActiveQuest>(); // 진행 중인 퀘스트 목록
-    public QuestUIManager questUIManager; // UI 매니저 참조
-    public QuestLogUI questLogUI;
-    private Queue<QuestData> pendingQuests = new Queue<QuestData>(); // 퀘스트 대기열
+    public List<QuestData>   allQuests; // 모든 퀘스트 데이터 리스트
+    public List<QuestData>   availableQuests = new List<QuestData>(); // 현재 발생 가능한 퀘스트 리스트    
+    public List<ActiveQuest> activeQuests    = new List<ActiveQuest>(); // 진행 중인 퀘스트 목록
+    public QuestUIManager    questUIManager; // UI 매니저 참조
+    public QuestLogUI        questLogUI;
+    public Queue<QuestData>  pendingQuests   = new Queue<QuestData>(); // 퀘스트 대기열
+
+    public QuestData CurrentQuest { get; private set; } // 현재 플레이어에게 제시된 퀘스트
+    private bool      canShowQuest = true;
 
     private void Awake()
     {
@@ -54,11 +56,18 @@ public class QuestManager : MonoBehaviour
         TimeSystem.Instance.OnMinuteChanged += CheckForAvailableQuests;
         // 이벤트 구독
         PlayerWallet.Instance.OnMoneyChanged += OnMoneyChanged;
+
+        canShowQuest = true;
     }
     private void Update()
     {
         // 매 프레임마다 진행 중인 퀘스트의 완료 조건을 확인
         CheckQuestCompletion();
+
+        if (canShowQuest)
+        {
+            TryShowNextQuest();
+        }
     }
 
     private void OnDestroy()
@@ -92,7 +101,7 @@ public class QuestManager : MonoBehaviour
         int currentDay = TimeSystem.Instance.CurrentDay;
 
         // 현재 시간까지 발생했어야 하는 모든 퀘스트를 찾습니다. (ToList()로 복사하여 순회 중 변경 문제 방지)
-        List<QuestData> questsToTrigger = availableQuests.Where(q =>
+        List<QuestData> questsToTrigger = availableQuests.AsValueEnumerable().Where(q =>
             (q.requiredDay < currentDay) ||
             (q.requiredDay == currentDay && q.requiredHour <= hour && q.requiredMin <= minute)
         ).ToList();
@@ -109,7 +118,7 @@ public class QuestManager : MonoBehaviour
         }
 
         // 대기열에 있는 다음 퀘스트를 표시 시도합니다.
-        TryShowNextQuest();
+        //TryShowNextQuest();
     }
 
     /// <summary>
@@ -118,15 +127,17 @@ public class QuestManager : MonoBehaviour
     private void TryShowNextQuest()
     {
         // 현재 다른 퀘스트가 표시 중이거나, 대기열이 비어있으면 아무것도 하지 않습니다.
-        if (currentQuest != null || questUIManager.IsVisible() || pendingQuests.Count == 0)
+        if (CurrentQuest != null || questUIManager.IsVisible() || pendingQuests.Count == 0)
         {
             return;
         }
 
+        canShowQuest = false;
+
         // 대기열에서 다음 퀘스트를 꺼내 화면에 표시합니다.
-        currentQuest = pendingQuests.Dequeue();
-        questUIManager.ShowQuest(currentQuest);
-        Debug.Log($"대기열에서 '{currentQuest.questName}' 퀘스트를 표시합니다.");
+        CurrentQuest = pendingQuests.Dequeue();
+        questUIManager.ShowQuest(CurrentQuest);
+        Debug.Log($"대기열에서 '{CurrentQuest.questName}' 퀘스트를 표시합니다.");
     }
 
     /// <summary>
@@ -134,19 +145,20 @@ public class QuestManager : MonoBehaviour
     /// </summary>
     public void AcceptQuest()
     {
-        if (currentQuest == null) return;
-        Debug.Log($"퀘스트 '{currentQuest.questName}' 수락됨");
+        if (CurrentQuest == null) return;
+        Debug.Log($"퀘스트 '{CurrentQuest.questName}' 수락됨");
         // 여기에 현재 진행중인 퀘스트 목록에 추가하고, 완료 조건을 체크하는 로직을 추가합니다.
-        ActiveQuest newActiveQuest = new ActiveQuest(currentQuest);
+        ActiveQuest newActiveQuest = new ActiveQuest(CurrentQuest);
         activeQuests.Add(newActiveQuest);
         questLogUI.AddQuestToList(newActiveQuest); // UI 로그에 퀘스트 추가
 
-        Debug.Log($"퀘스트 '{currentQuest.questName}' 수락됨");
-        currentQuest = null;
+        Debug.Log($"퀘스트 '{CurrentQuest.questName}' 수락됨");
+        CurrentQuest = null;
 
         // UI를 숨기고, 애니메이션이 끝나면 대기열의 다음 퀘스트를 확인합니다.
         questUIManager.HideQuest(true, () => {
-            TryShowNextQuest();
+            canShowQuest = true;
+            //TryShowNextQuest();
         });
     }
 
@@ -283,16 +295,94 @@ public class QuestManager : MonoBehaviour
         questLogUI.RemoveQuestFromList(quest);
     }
 
-    // 퀘스트 거절
+    /// <summary>
+    /// 퀘스트 거절
+    /// </summary>
     public void DeclineQuest()
     {
-        if (currentQuest == null) return;
-        Debug.Log($"퀘스트 '{currentQuest.questName}' 거절됨");
-        currentQuest = null;
+        if (CurrentQuest == null) return;
+        Debug.Log($"퀘스트 '{CurrentQuest.questName}' 거절됨");
+        CurrentQuest = null;
 
         // UI를 숨기고, 애니메이션이 끝나면 대기열의 다음 퀘스트를 확인합니다.
         questUIManager.HideQuest(false, () => {
-            TryShowNextQuest();
+            canShowQuest = true;
+            //TryShowNextQuest();
         });
+    }
+
+    public void LoadQuestData(List<QuestSaveData> activeQuestsData, List<string> pendingQuestNames, List<string> availableQuestNames, string currentQuestName)
+    {
+        // 1. 모든 퀘스트 목록 초기화
+        activeQuests.Clear();
+        pendingQuests.Clear();
+        availableQuests.Clear();
+
+        foreach (Transform child in questLogUI.questListContent)
+        {
+            Destroy(child.gameObject);
+        }
+
+        //questLogUI.questListContent.GetComponentsInChildren<Transform>().AsValueEnumerable().Where(t => t != questLogUI.questListContent).ToList().ForEach(t => Destroy(t.gameObject));
+
+
+        // 2. 진행 중인 퀘스트(activeQuests) 복원
+        foreach (var savedQuest in activeQuestsData)
+        {
+            QuestData questData = allQuests.AsValueEnumerable().FirstOrDefault(q => q.questName == savedQuest.questName);
+            if (questData != null)
+            {
+                ActiveQuest activeQuest = new ActiveQuest(questData)
+                {
+                    currentAmount = savedQuest.currentAmount,
+                    isCompleted = savedQuest.isCompleted,
+                    startingMoney = savedQuest.startingMoney
+                };
+                activeQuests.Add(activeQuest);
+                questLogUI.AddQuestToList(activeQuest); // UI에도 추가
+            }
+        }
+
+        // 3. 대기 중인 퀘스트(pendingQuests) 복원
+        foreach (var questName in pendingQuestNames)
+        {
+            QuestData questData = allQuests.AsValueEnumerable().FirstOrDefault(q => q.questName == questName);
+            if (questData != null)
+            {
+                pendingQuests.Enqueue(questData);
+            }
+        }
+
+        // 4. 발생 가능한 퀘스트(availableQuests) 복원
+        foreach (var questName in availableQuestNames)
+        {
+            QuestData questData = allQuests.AsValueEnumerable().FirstOrDefault(q => q.questName == questName);
+            if (questData != null)
+            {
+                availableQuests.Add(questData);
+            }
+        }
+
+        // 5. 현재 제안 중이던 퀘스트 복원 (가장 중요!)
+        if (!string.IsNullOrEmpty(currentQuestName))
+        {
+            QuestData currentQuestData = allQuests.FirstOrDefault(q => q.questName == currentQuestName);
+            if (currentQuestData != null)
+            {
+                // 대기열의 가장 앞에 추가하여, 로드 후 바로 표시되도록 함
+                var tempQueue = new Queue<QuestData>(pendingQuests);
+                pendingQuests.Clear();
+                pendingQuests.Enqueue(currentQuestData);
+                while (tempQueue.Count > 0)
+                {
+                    pendingQuests.Enqueue(tempQueue.Dequeue());
+                }
+            }
+        }
+
+        canShowQuest = true; // 퀘스트를 보여줄 수 있도록 플래그를 true로 설정
+        //TryShowNextQuest();
+
+        Debug.Log("퀘스트 데이터 로드 완료");
     }
 }

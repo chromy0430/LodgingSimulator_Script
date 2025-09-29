@@ -2,12 +2,13 @@ using JY;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using ZLinq;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 [System.Serializable]
-public class SaveData
+public class SaveData // 저장할 데이터
 {
     public int playerMoney;
     public GridDataSave floorData;
@@ -20,10 +21,26 @@ public class SaveData
     public int currentDay;
     public int currentPurchaseLevel;
     public bool floorLock;
+
+    // 퀘스트 데이터
+    public List<QuestSaveData> activeQuests;
+    public List<string> pendingQuestNames;
+    public List<string> availableQuestNames;
+    public string currentQuestName;
 }
 
 [System.Serializable]
-public class GridDataSave
+public class QuestSaveData // 퀘스트 저장
+{
+    public string questName;
+    public int currentAmount;
+    public bool isCompleted;
+    public int startingMoney;
+
+}
+
+[System.Serializable]
+public class GridDataSave // 그리드 저장
 {
     public List<GridEntry> placedObjects;
 }
@@ -65,6 +82,18 @@ public class SaveManager : MonoBehaviour
 
     public async void SaveGame()
     {
+        List<QuestSaveData> activeQuestsToSave = new List<QuestSaveData>();
+        foreach (var activeQuest in QuestManager.Instance.activeQuests)
+        {
+            activeQuestsToSave.Add(new QuestSaveData
+            {
+                questName = activeQuest.data.questName,
+                currentAmount = activeQuest.currentAmount,
+                isCompleted = activeQuest.isCompleted,
+                startingMoney = activeQuest.startingMoney
+            });
+        }
+
         SaveData saveData = new SaveData
         {
             playerMoney = PlayerWallet.Instance.money,
@@ -77,7 +106,11 @@ public class SaveManager : MonoBehaviour
             paymentQueue = PaymentSystem.Instance.paymentQueue,
             currentReputation = ReputationSystem.Instance.CurrentReputation,
             currentTime = TimeSystem.Instance.currentTime,
-            currentDay = TimeSystem.Instance.CurrentDay
+            currentDay = TimeSystem.Instance.CurrentDay,
+            activeQuests = activeQuestsToSave,
+            pendingQuestNames = QuestManager.Instance.pendingQuests.AsValueEnumerable().Select(q => q.questName).ToList(),
+            availableQuestNames = QuestManager.Instance.availableQuests.AsValueEnumerable().Select(q => q.questName).ToList(),
+            currentQuestName = (QuestManager.Instance.CurrentQuest != null) ? QuestManager.Instance.CurrentQuest.questName : null
         };
 
         try
@@ -172,7 +205,8 @@ public class SaveManager : MonoBehaviour
                           PaymentSystem.Instance != null &&
                           ReputationSystem.Instance != null &&
                           TimeSystem.Instance != null &&
-                          ObjectPlacer.Instance != null;
+                          ObjectPlacer.Instance != null &&
+                          QuestManager.Instance != null;
 
         if (!initialized)
         {
@@ -182,7 +216,8 @@ public class SaveManager : MonoBehaviour
                              $"PaymentSystem: {PaymentSystem.Instance != null}, " +
                              $"ReputationSystem: {ReputationSystem.Instance != null}, " +
                              $"TimeSystem: {TimeSystem.Instance != null}, " +
-                             $"ObjectPlacer: {ObjectPlacer.Instance != null}");
+                             $"ObjectPlacer: {ObjectPlacer.Instance != null}, " +
+                             $"QuestManager: {QuestManager.Instance != null}");
         }
         else
         {
@@ -203,6 +238,19 @@ public class SaveManager : MonoBehaviour
             if (PlacementSystem.Instance == null) throw new System.Exception("PlacementSystem.Instance is null");
             PlacementSystem.Instance.currentPurchaseLevel = loadedSaveData.currentPurchaseLevel;
             PlacementSystem.Instance.FloorLock = loadedSaveData.floorLock;
+            PlacementSystem.Instance.UpdatePurchaseUI();
+            
+
+            if (QuestManager.Instance != null && loadedSaveData.activeQuests != null)
+            {
+                QuestManager.Instance.LoadQuestData(
+                    loadedSaveData.activeQuests,
+                    loadedSaveData.pendingQuestNames,
+                    loadedSaveData.availableQuestNames,
+                    loadedSaveData.currentQuestName
+                );
+            }
+
 
             ClearPlacedObjects();
 
@@ -222,8 +270,10 @@ public class SaveManager : MonoBehaviour
             TimeSystem.Instance.SetDateTime(loadedSaveData.currentDay, (int)(loadedSaveData.currentTime / 3600), (int)((loadedSaveData.currentTime % 3600) / 60));
             TimeManager.instance.UpdateDayUI(loadedSaveData.currentDay);
 
-            PlacementSystem.Instance.UpdateGridBounds();
+            
             PlacementSystem.Instance.ActivatePlanesByLevel(loadedSaveData.currentPurchaseLevel);
+            PlacementSystem.Instance.UpdateGridBounds();
+            PlacementSystem.Instance.HideAllPlanes();
 
             Debug.Log("게임 데이터 복원 완료");
         }
@@ -378,6 +428,10 @@ public class SaveManager : MonoBehaviour
                 return 3;
             case 8:
                 return 4;
+            case 16:
+                return 5;
+            case 32:
+                return 6;
 
             default:
                 return 1;
@@ -396,7 +450,10 @@ public class SaveManager : MonoBehaviour
                 return 9.63405f;
             case 4:
                 return 14.45f;
-
+            case 5:
+                return 19.2675f; // 14.45 + 4.8175
+            case 6:
+                return 24.085f;
             default:
                 return 0;
         }

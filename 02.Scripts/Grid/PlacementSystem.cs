@@ -30,7 +30,7 @@ public class PlacementSystem : MonoBehaviour
     private List<GameObject> cellIndicators = new List<GameObject>();
     private int selectedObjectIndex = -1;
     public int currentPurchaseLevel = 1;
-    public bool FloorLock;
+    public bool FloorLock = false;
     
     // 가구 레이어 마스크 설정
     private int furnitureLayerMask;
@@ -44,6 +44,8 @@ public class PlacementSystem : MonoBehaviour
     public List<GameObject> plane2f;
     public List<GameObject> plane3f;
     public List<GameObject> plane4f;
+    public List<GameObject> plane5f;
+    public List<GameObject> plane6f;
 
     [Header("땅 구매 버튼")]
     [SerializeField] private Button purchaseButton;
@@ -90,19 +92,13 @@ public class PlacementSystem : MonoBehaviour
         {
             purchase2FButton.onClick.AddListener(PurchaseOtherFloor);
         }
-        
-        changeFloorButton.SetActive(false);
-        FloorLock = false;
+
+        UpdatePurchaseUI();
+        //changeFloorButton.SetActive(false);
     }
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.T)) // 언제든 삭제 가능
-        {
-            FloorLock = true;
-            Debug.Log($"증축 시스템 해금 상태 = {FloorLock}");
-        }
-
         DeliteModeMouth();
 
 
@@ -134,6 +130,12 @@ public class PlacementSystem : MonoBehaviour
                 break;
             case 4:
                 gridPosition.y = 8;
+                break;
+            case 5:
+                gridPosition.y = 16;
+                break;
+            case 6:
+                gridPosition.y = 32;
                 break;
         }
 
@@ -339,6 +341,46 @@ public class PlacementSystem : MonoBehaviour
                     }
                 }
             }
+
+            foreach (GameObject planeRend in plane5f)
+            {
+                if (planeRend is not null)
+                {
+                    Renderer planeRenderer = planeRend.GetComponent<Renderer>();
+                    if (planeRenderer is not null)
+                    {
+                        Bounds rendererBounds = planeRenderer.bounds;
+                        rendererBounds.Expand(new Vector3(0, 1, 0));
+
+                        bool alreadyExists = planeBounds.Exists(b => b.center == rendererBounds.center && b.size == rendererBounds.size);
+                        if (!alreadyExists)
+                        {
+                            planeBounds.Add(rendererBounds);
+                            gridVisualization.Add(planeRend);
+                        }
+                    }
+                }
+            }
+
+            foreach (GameObject planeRend in plane6f)
+            {
+                if (planeRend is not null)
+                {
+                    Renderer planeRenderer = planeRend.GetComponent<Renderer>();
+                    if (planeRenderer is not null)
+                    {
+                        Bounds rendererBounds = planeRenderer.bounds;
+                        rendererBounds.Expand(new Vector3(0, 1, 0));
+
+                        bool alreadyExists = planeBounds.Exists(b => b.center == rendererBounds.center && b.size == rendererBounds.size);
+                        if (!alreadyExists)
+                        {
+                            planeBounds.Add(rendererBounds);
+                            gridVisualization.Add(planeRend);
+                        }
+                    }
+                }
+            }
         }
     }
     #endregion
@@ -420,6 +462,15 @@ public class PlacementSystem : MonoBehaviour
         int index = objectPlacer.PlaceObject(database.objectsData[selectedObjectIndex].Prefab, worldPosition, previewRotation);
         
         PlayerWallet.Instance.SpendMoney(database.objectsData[selectedObjectIndex].BuildPrice);
+        
+        // 작업 위치 관리자에게 새 가구 배치 알림
+        if (JY.WorkPositionManager.Instance != null)
+        {
+            GameObject placedObject = database.objectsData[selectedObjectIndex].Prefab;
+            JY.WorkPositionManager.Instance.OnFurnitureePlaced(placedObject, worldPosition);
+        }
+        
+        // 주방 감지기는 ObjectPlacer에서 실제 인스턴스로 처리됩니다
 
         selectedData = GetSelectedGridData();
 
@@ -833,18 +884,25 @@ public class PlacementSystem : MonoBehaviour
         ActivatePlanesByLevel(currentPurchaseLevel);
         UpdateGridBounds();
 
-        if (currentPurchaseLevel >= 4)
+        UpdatePurchaseUI();
+
+        /*if (currentPurchaseLevel >= 4)
         {
+            FloorLock = true;
             Debug.Log("모든 땅이 구매되었습니다!");
             if (purchaseButton != null)
             {
                 purchaseButton.gameObject.SetActive(false);
             }
             return;
-        }
+        }*/
 
         Debug.Log($"현재 구매 단계: {currentPurchaseLevel}, 활성화된 Plane 수: {gridVisualization.Count}");
     }
+
+    [SerializeField] List<GameObject> purchase1fPlane_Lv2;
+    [SerializeField] List<GameObject> purchase1fPlane_Lv3;
+    [SerializeField] List<GameObject> purchase1fPlane_Lv4;
 
     /// <summary>
     /// 플레인의 이름에서 뽑아낸 정수와 반환된 정수의 값이 같을 때, 그리드 플레인을 활성화한다. 
@@ -852,7 +910,29 @@ public class PlacementSystem : MonoBehaviour
     /// <param name="level"></param>
     public void ActivatePlanesByLevel(int level)
     {
-        foreach (GameObject planeObj in plane1f)
+        if (level >= 2)
+        {
+            foreach (GameObject planeObj in purchase1fPlane_Lv2)
+            {
+                planeObj.SetActive(true);
+            }
+        }
+        if (level >= 3)
+        {
+            foreach (GameObject planeObj in purchase1fPlane_Lv3)
+            {
+                planeObj.SetActive(true);
+            }
+        }
+        if (level >= 4)
+        {
+            foreach (GameObject planeObj in purchase1fPlane_Lv4)
+            {
+                planeObj.SetActive(true);
+            }
+        }
+
+        /*foreach (GameObject planeObj in plane1f)
         {
             string planeName = planeObj.name;
             int planeLevel = ExtractLevelFromPlaneName(planeName);
@@ -862,9 +942,9 @@ public class PlacementSystem : MonoBehaviour
                 planeObj.SetActive(true);
                 Debug.Log($"활성화된 Plane: {planeName}");
             }
-        }
+        }*/
     }
-
+/*
     /// <summary>
     /// 플레인의 이름에서 _를 기준으로 숫자를 뽑아내어 반환한다.
     /// </summary>
@@ -875,11 +955,15 @@ public class PlacementSystem : MonoBehaviour
         string[] parts = planeName.Split('_');
         if (parts.Length > 1 && int.TryParse(parts[1], out int level))
         {
+            Debug.Log("현재 구매 레벨 = " + level);
+
+            
+
             return level;
         }
-        Debug.LogWarning($"Plane 이름에서 레벨을 추출할 수 없습니다: {planeName}");
+        //Debug.LogWarning($"Plane 이름에서 레벨을 추출할 수 없습니다: {planeName}");
         return 0;
-    }
+    }*/
     #endregion
 
     #region 2층 구매
@@ -900,16 +984,47 @@ public class PlacementSystem : MonoBehaviour
     /// </summary>
     private void PurchaseOtherFloor()
     {
-        if (!FloorLock) return;
-
+        //if (!FloorLock) return;
         if (currentPurchaseLevel < 4)
         {
             Debug.LogWarning("모든 땅을 구매한 후에만 2층을 구매할 수 있습니다.");
             return;
         }
-        
-        changeFloorButton.SetActive(FloorLock);
+
+        FloorLock = true;
+
+        UpdatePurchaseUI();
+        //changeFloorButton.SetActive(FloorLock);
         UpdateGridBounds();
+    }
+
+    /// <summary>
+    /// currentPurchaseLevel과 FloorLock 상태에 따라 구매 관련 UI를 업데이트합니다.
+    /// </summary>
+    public void UpdatePurchaseUI()
+    {
+        // 땅 구매 버튼 상태 업데이트
+        if (purchaseButton != null)
+        {
+            if (currentPurchaseLevel >= 4)
+            {
+                purchaseButton.gameObject.SetActive(false);
+                Debug.Log("모든 땅이 구매되어 버튼을 비활성화합니다.");
+            }
+            else
+            {
+                purchaseButton.gameObject.SetActive(true);
+            }
+        }
+
+        // 층 변경 버튼 상태 업데이트
+        if (changeFloorButton != null)
+        {
+            purchase2FButton.gameObject.SetActive(!FloorLock);
+            changeFloorButton.SetActive(FloorLock);
+            changeFloorSystem.Init();
+            if (FloorLock) Debug.Log("층이 구매되어 층 변경 버튼을 활성화합니다.");
+        }
     }
 
     #endregion
@@ -1038,6 +1153,16 @@ public class PlacementSystem : MonoBehaviour
                 Vector3 worldPosition = grid.GetCellCenterWorld(currentPos);
                 int index = objectPlacer.PlaceObject(database.objectsData[selectedObjectIndex].Prefab, worldPosition, previewRotation);
                 PlayerWallet.Instance.SpendMoney(database.objectsData[selectedObjectIndex].BuildPrice);
+                
+                // 작업 위치 관리자에게 새 가구 배치 알림
+                if (JY.WorkPositionManager.Instance != null)
+                {
+                    GameObject placedObject = database.objectsData[selectedObjectIndex].Prefab;
+                    JY.WorkPositionManager.Instance.OnFurnitureePlaced(placedObject, worldPosition);
+                }
+                
+                // 주방 감지기는 ObjectPlacer에서 실제 인스턴스로 처리됩니다
+                
                 selectedData.AddObjectAt(currentPos, objectSize, database.objectsData[selectedObjectIndex].ID, index, 
                 database.objectsData[selectedObjectIndex].kindIndex, previewRotation, grid, isWall);
             }
@@ -1115,6 +1240,8 @@ public class PlacementSystem : MonoBehaviour
         inputManager.OnClicked += DeleteStructure; // 클릭 시 삭제 함수 호출
         inputManager.OnExit += StopDeleteMode;
         mouseIndicator.SetActive(true); // 인디케이터 활성화
+
+
         Debug.Log("삭제 모드 시작");
     }
 
@@ -1192,6 +1319,8 @@ public class PlacementSystem : MonoBehaviour
         // GridData에서 데이터 제거
         if (selectedData.RemoveObjectByIndex(objectIndex))
         {
+            // 주방 감지기는 ObjectPlacer에서 실제 오브젝트로 처리됩니다
+            
             // ObjectPlacer에서 오브젝트 제거
             objectPlacer.RemoveObject(objectIndex);
             PlayerWallet.Instance.AddMoney(objectData.BuildPrice);
@@ -1254,6 +1383,7 @@ public class PlacementSystem : MonoBehaviour
 
     public void HidePlane(int floor)
     {
+        Debug.Log("현재 floor는 = " + floor);
         // 플레인 비활성화
         foreach (GameObject planeObj in plane1f)
         {
@@ -1286,6 +1416,22 @@ public class PlacementSystem : MonoBehaviour
                 planeObj.SetActive(floor == 4);
             }
         }
+
+        foreach (GameObject planeObj in plane5f)
+        {
+            if (planeObj is not null)
+            {
+                planeObj.SetActive(floor == 5);
+            }
+        }
+
+        foreach (GameObject planeObj in plane6f)
+        {
+            if (planeObj is not null)
+            {
+                planeObj.SetActive(floor == 6);
+            }
+        }
     }
     
     // 모든 플레인을 비활성화하는 메서드
@@ -1316,6 +1462,22 @@ public class PlacementSystem : MonoBehaviour
         }
 
         foreach (GameObject planeObj in plane4f)
+        {
+            if (planeObj is not null)
+            {
+                planeObj.SetActive(false);
+            }
+        }
+
+        foreach (GameObject planeObj in plane5f)
+        {
+            if (planeObj is not null)
+            {
+                planeObj.SetActive(false);
+            }
+        }
+
+        foreach (GameObject planeObj in plane6f)
         {
             if (planeObj is not null)
             {

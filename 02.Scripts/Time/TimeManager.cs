@@ -19,9 +19,10 @@ namespace JY
         [SerializeField] private TextMeshProUGUI timeText;
         [SerializeField] private TextMeshProUGUI dayText;
         
+        
         private TimeSystem timeSystem;
 
-        public static TimeManager instance;
+        public static TimeManager instance { get; set; }
 
         [SerializeField] private LocalizedString dayCounterLocalizedString;
         #endregion
@@ -114,6 +115,8 @@ namespace JY
             dayText.text = localizedString;
             Debug.Log(localizedString);
         }
+
+        
         #endregion
     }
 }

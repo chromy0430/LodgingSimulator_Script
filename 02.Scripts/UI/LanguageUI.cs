@@ -1,5 +1,6 @@
 using System.Collections;
-using System.Linq;
+//using System.Linq;
+using ZLinq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Localization.Settings;
@@ -49,7 +50,7 @@ public class LanguageUI : MonoBehaviour
         {
             // 저장된 언어 코드에 해당하는 로케일 찾기
             var locale = LocalizationSettings.AvailableLocales.Locales
-                .FirstOrDefault(l => l.Identifier.Code == savedLanguageCode);
+                .AsValueEnumerable().FirstOrDefault(l => l.Identifier.Code == savedLanguageCode);
 
             if (locale != null)
             {

@@ -396,8 +396,9 @@ namespace JY
         {
             DebugLog($"조건 체크: {employeeType.typeName}, workPositionTag: '{employeeType.workPositionTag}'");
             
-            // 카운터 직원인 경우
-            if (employeeType.workPositionTag == "카운터")
+            // 카운터 직원인 경우 (리셉션 태그 포함)
+            if (employeeType.workPositionTag == "WorkPosition_Reception" ||
+                employeeType.jobRole == "카운터")
             {
                 bool result = CanHireCounterEmployee();
                 DebugLog($"카운터 직원 조건 체크 결과: {result}");
@@ -564,7 +565,7 @@ namespace JY
             
             return $"카운터: {currentCounterEmployees}/{counterCount * maxEmployeesPerCounter}명, " +
                    $"식당 전체: {currentKitchenEmployees}/{kitchenCount * maxEmployeesPerKitchen}명, " +
-                   $"식당 카운터: {currentKitchenCounterEmployees}/{kitchenCount * maxCounterEmployeesPerKitchen}명, " +
+                   $"식당 카운터: {currentKitchenCounterEmployees}/{kitchenCount * maxCounterEmployeesPerKitchen}명, \n" +
                    $"식당 대기: {currentKitchenWaitingEmployees}/{kitchenCount * maxWaitingEmployeesPerKitchen}명";
         }
         
@@ -629,7 +630,8 @@ namespace JY
         /// </summary>
         private void AssignEmployeeToPosition(AIEmployee employee, string workPositionTag)
         {
-            if (workPositionTag == "카운터")
+            if (workPositionTag == "WorkPosition_Reception" ||
+                employee.jobRole == "카운터")
             {
                 // 사용 가능한 카운터 찾기
                 GameObject[] counters = GameObject.FindGameObjectsWithTag("Counter");
@@ -644,7 +646,18 @@ namespace JY
                     {
                         counterEmployees[counter].Add(employee);
                         employee.assignedCounter = counter; // AIEmployee에 assignedCounter 필드 추가 필요
-                        DebugLog($"직원 '{employee.employeeName}'이(가) 카운터 '{counter.name}'에 배정되었습니다.");
+                        
+                        // 카운터 매니저에 직원 배정 알림
+                        CounterManager counterManager = counter.GetComponent<CounterManager>();
+                        if (counterManager != null)
+                        {
+                            counterManager.AssignEmployee(employee);
+                            DebugLog($"직원 '{employee.employeeName}'이(가) 카운터 '{counter.name}'과 CounterManager에 배정되었습니다.");
+                        }
+                        else
+                        {
+                            DebugLog($"직원 '{employee.employeeName}'이(가) 카운터 '{counter.name}'에 배정되었습니다 (CounterManager 없음).");
+                        }
                         return;
                     }
                 }
@@ -747,7 +760,21 @@ namespace JY
                 if (kvp.Value.Contains(employee))
                 {
                     kvp.Value.Remove(employee);
-                    DebugLog($"직원 '{employee.employeeName}'이(가) 카운터 '{kvp.Key.name}'에서 제거되었습니다.");
+                    
+                    // 카운터 매니저에서도 직원 해제
+                    if (kvp.Key != null)
+                    {
+                        CounterManager counterManager = kvp.Key.GetComponent<CounterManager>();
+                        if (counterManager != null)
+                        {
+                            counterManager.UnassignEmployee();
+                            DebugLog($"직원 '{employee.employeeName}'이(가) 카운터 '{kvp.Key.name}'과 CounterManager에서 제거되었습니다.");
+                        }
+                        else
+                        {
+                            DebugLog($"직원 '{employee.employeeName}'이(가) 카운터 '{kvp.Key.name}'에서 제거되었습니다 (CounterManager 없음).");
+                        }
+                    }
                     break;
                 }
             }

@@ -145,7 +145,7 @@ public class ObjectPlacer : MonoBehaviour
                 activeSequences.Add(sequence);
 
                 // DOScale 애니메이션 추가 (0.3초 동안 스케일 0으로 축소)
-                sequence.Append(obj.transform.DOScale(Vector3.zero, 0.3f).SetEase(Ease.InBack));
+                sequence.Append(obj.transform.DOScale(Vector3.zero, 0.3f).SetEase(Ease.InBack).SetUpdate(true));
 
                 // 애니메이션 완료 후 실행될 콜백 추가
                 sequence.OnComplete(() =>
@@ -163,13 +163,8 @@ public class ObjectPlacer : MonoBehaviour
                     spawnEffect.OnBuildingPlaced(obj.transform.position);
                     activeSequences.Remove(sequence);
                     sequence.Kill();
-                });
-
-                /*obj.transform.DOScale(Vector3.zero, 0.3f).SetEase(destroyEase);
-                Destroy(obj);
-                spawnEffect.OnBuildingPlaced(obj.transform.position);*/
+                });                
             }
-            //placedGameObjects.RemoveAt(index);
             placedGameObjects[index] = null; // 참조 제거 (선택적으로 리스트에서 완전히 제거 가능)            
         }
     }

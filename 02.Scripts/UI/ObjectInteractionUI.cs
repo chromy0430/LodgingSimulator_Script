@@ -130,7 +130,7 @@ public class ObjectInteractionUI : MonoBehaviour
         interactionPanel.SetActive(true);
         interactionPanel.transform.localScale = Vector3.zero;
         interactionPanel.transform.DOScale(Vector3.one * 1.5f , 0.3f)
-            .SetEase(Ease.OutBack)
+            .SetEase(Ease.OutBack).SetUpdate(true)
             .OnComplete(() => {
                 // 애니메이션 완료 후 클릭 감지 활성화
                 justShown = false;
@@ -142,7 +142,7 @@ public class ObjectInteractionUI : MonoBehaviour
         if (interactionPanel.activeInHierarchy)
         {
             interactionPanel.transform.DOScale(Vector3.zero, 0.1f)
-                .SetEase(Ease.InBack)
+                .SetEase(Ease.InBack).SetUpdate(true)
                 .OnComplete(() => interactionPanel.SetActive(false));
         }
 
@@ -338,7 +338,7 @@ public class ObjectInteractionUI : MonoBehaviour
         // 90도씩 회전
         Quaternion newRotation = selectedObject.transform.rotation * Quaternion.Euler(0, 90, 0);
         selectedObject.transform.DORotate(newRotation.eulerAngles, 0.5f)
-        .SetEase(Ease.OutQuad)
+        .SetEase(Ease.OutQuad).SetUpdate(true)
         .OnComplete(() =>
         {
             isRotating = false;
@@ -373,7 +373,7 @@ public class ObjectInteractionUI : MonoBehaviour
                 {
                     // 삭제 애니메이션
                     selectedObject.transform.DOScale(Vector3.zero, 0.3f)
-                        .SetEase(Ease.InBack)
+                        .SetEase(Ease.InBack).SetUpdate(true)
                         .OnComplete(() =>
                         {
                             selectedData.RemoveObjectByIndex(selectedObjectIndex);
@@ -434,7 +434,7 @@ public class ObjectInteractionUI : MonoBehaviour
 
                     // 새 위치로 이동
                     Vector3 newWorldPosition = placementSystem.grid.GetCellCenterWorld(currentGridPosition);
-                    selectedObject.transform.DOMove(newWorldPosition, 0.5f).SetEase(Ease.OutQuad);
+                    selectedObject.transform.DOMove(newWorldPosition, 0.5f).SetEase(Ease.OutQuad).SetUpdate(true);
 
                     // 새 위치에 GridData 추가
                     AddToNewGridData(currentGridPosition);

@@ -215,9 +215,28 @@ namespace JY
         /// </summary>
         public void StartOrderProcessing()
         {
-            if (_isProcessingOrder || !isHired || !IsWorkTime) return;
+            DebugLog($"🔄 StartOrderProcessing 호출됨 - 처리중: {_isProcessingOrder}, 고용됨: {isHired}, 근무시간: {IsWorkTime}", true);
+            DebugLog($"⏰ 현재시간: {(timeSystem != null ? timeSystem.CurrentHour : -1)}시, 근무시간: {workStartHour}~{workEndHour}시", true);
             
-            DebugLog("📝 주문 처리 시작", true);
+            if (_isProcessingOrder)
+            {
+                DebugLog("❌ 이미 다른 주문을 처리 중입니다.", true);
+                return;
+            }
+            
+            if (!isHired)
+            {
+                DebugLog("❌ 고용되지 않은 직원입니다.", true);
+                return;
+            }
+            
+            if (!IsWorkTime)
+            {
+                DebugLog("❌ 근무시간이 아닙니다.", true);
+                return;
+            }
+            
+            DebugLog("✅ 주문 처리 시작!", true);
             _isProcessingOrder = true;
             
             // 기존 코루틴 정리
@@ -255,12 +274,15 @@ namespace JY
                 
                 // 3. 가스에서 요리 (3초)
                 SetState(EmployeeState.Cooking);
-                PlayAnimation(workAnimationTrigger); // 요리 애니메이션
+                PlayAnimationBool(workAnimationTrigger, true);
+                //PlayAnimation(workAnimationTrigger); // 요리 애니메이션
                 DebugLog("👨‍🍳 요리 중...", true);
                 yield return new WaitForSeconds(3f);
-                
+                PlayAnimationBool(workAnimationTrigger, false);
+
                 // 4. 원래 위치로 복귀
                 DebugLog("🏃‍♂️ 작업 위치로 복귀", true);
+                CleanUpAnimation();
                 SetState(EmployeeState.Moving);
                 MoveToPosition(workPosition);
                 
@@ -269,9 +291,11 @@ namespace JY
                 {
                     yield return new WaitForSeconds(0.1f);
                 }
-                
+
+                CleanUpAnimation();
                 SetState(EmployeeState.Working);
-                PlayAnimation(workAnimationTrigger);
+                PlayAnimationBool(workAnimationTrigger, true);
+                //PlayAnimation(workAnimationTrigger);
             }
             else
             {
@@ -841,23 +865,36 @@ namespace JY
             switch (state)
             {
                 case EmployeeState.Idle:
+                    CleanUpAnimation();
                     PlayAnimation(idleAnimationTrigger);
                     break;
                 case EmployeeState.Moving:
-                    PlayAnimation(moveAnimationTrigger);
+                    CleanUpAnimation();
+                    PlayAnimationBool(moveAnimationTrigger, true);
+                    //PlayAnimation(moveAnimationTrigger);
                     break;
                 case EmployeeState.Working:
-                    PlayAnimation(workAnimationTrigger);
+                    CleanUpAnimation();
+                    PlayAnimationBool(workAnimationTrigger, true);
+                    //PlayAnimation(workAnimationTrigger);
                     break;
                 case EmployeeState.Resting:
+                    CleanUpAnimation();
                     PlayAnimation(idleAnimationTrigger);
                     break;
                 case EmployeeState.OffDuty:
+                    CleanUpAnimation();
                     PlayAnimation(idleAnimationTrigger);
                     break;
             }
         }
-        
+
+        private void CleanUpAnimation()
+        {
+            PlayAnimationBool(workAnimationTrigger, false);
+            PlayAnimationBool(moveAnimationTrigger, false);
+        }
+
         #endregion
         
         #region 이동 관리
@@ -901,6 +938,7 @@ namespace JY
             // 주문 받는 중 - 코루틴에서 처리하므로 여기서는 애니메이션만 확인
             if (animator != null)
             {
+                CleanUpAnimation();
                 PlayAnimation(idleAnimationTrigger);
             }
         }
@@ -913,7 +951,8 @@ namespace JY
             // 가스 위치로 이동 중 - 코루틴에서 처리
             if (animator != null && !isMoving)
             {
-                PlayAnimation(moveAnimationTrigger);
+                CleanUpAnimation();
+                PlayAnimationBool(moveAnimationTrigger, true);
                 isMoving = true;
             }
         }
@@ -926,7 +965,7 @@ namespace JY
             // 요리 중 - 애니메이션 확인
             if (animator != null)
             {
-                PlayAnimation(workAnimationTrigger);
+                PlayAnimationBool(workAnimationTrigger, true);
             }
         }
         
@@ -1017,6 +1056,15 @@ namespace JY
             if (animator != null && !string.IsNullOrEmpty(triggerName))
             {
                 animator.SetTrigger(triggerName);
+            }
+        }
+
+        private void PlayAnimationBool(string animationName, bool working)
+        {
+            if (animator != null && !string.IsNullOrEmpty(animationName))
+            {
+
+                animator.SetBool(animationName, working);
             }
         }
         

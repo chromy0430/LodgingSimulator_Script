@@ -14,8 +14,6 @@ namespace JY
     {
         [Header("UI 패널")]
         [SerializeField] private GameObject hiringPanel;
-        [SerializeField] private Button openHiringPanelButton;
-        [SerializeField] private Button closeHiringPanelButton;
         
         [Header("직원 목록")]
         [SerializeField] private Transform employeeListParent;
@@ -46,6 +44,8 @@ namespace JY
         // UI 상태
         private EmployeeType selectedEmployeeType;
         private List<GameObject> employeeUIItems = new List<GameObject>();
+
+        [SerializeField] private Button Btn_CloseUI;
         
         #region Unity Lifecycle
         
@@ -68,6 +68,7 @@ namespace JY
         private void InitializeUI()
         {
             // 시스템 참조 가져오기
+            Btn_CloseUI.onClick.AddListener(CloseUI);
             hiringSystem = EmployeeHiringSystem.Instance;
             playerWallet = PlayerWallet.Instance;
             
@@ -86,7 +87,7 @@ namespace JY
             // UI 초기 상태 설정
             if (hiringPanel != null)
             {
-                hiringPanel.SetActive(false);
+                hiringPanel.SetActive(true);
             }
             
             if (confirmationDialog != null)
@@ -107,16 +108,6 @@ namespace JY
         
         private void SetupEventListeners()
         {
-            // 패널 열기/닫기 버튼
-            if (openHiringPanelButton != null)
-            {
-                openHiringPanelButton.onClick.AddListener(OpenHiringPanel);
-            }
-            
-            if (closeHiringPanelButton != null)
-            {
-                closeHiringPanelButton.onClick.AddListener(CloseHiringPanel);
-            }
             
             // 확인 대화상자 버튼
             if (confirmButton != null)
@@ -141,15 +132,6 @@ namespace JY
         
         private void RemoveEventListeners()
         {
-            if (openHiringPanelButton != null)
-            {
-                openHiringPanelButton.onClick.RemoveListener(OpenHiringPanel);
-            }
-            
-            if (closeHiringPanelButton != null)
-            {
-                closeHiringPanelButton.onClick.RemoveListener(CloseHiringPanel);
-            }
             
             if (confirmButton != null)
             {
@@ -270,30 +252,16 @@ namespace JY
             }
             employeeUIItems.Clear();
         }
-        
+
         #endregion
-        
+
         #region UI 이벤트
-        
-        public void OpenHiringPanel()
+
+        public void CloseUI()
         {
-            if (hiringPanel != null)
-            {
-                hiringPanel.SetActive(true);
-                RefreshUI();
-                DebugLog("고용 패널이 열렸습니다.");
-            }
+            this.gameObject.SetActive(false);
         }
-        
-        public void CloseHiringPanel()
-        {
-            if (hiringPanel != null)
-            {
-                hiringPanel.SetActive(false);
-                DebugLog("고용 패널이 닫혔습니다.");
-            }
-        }
-        
+
         private void RequestHiring(EmployeeType employeeType)
         {
             selectedEmployeeType = employeeType;

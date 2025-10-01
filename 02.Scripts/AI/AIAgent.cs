@@ -69,6 +69,13 @@ public class AIAgent : MonoBehaviour
     private bool isEating = false;              // 식사 중인지 여부
     private Coroutine eatingCoroutine;         // 식사 관련 코루틴 참조
     
+    // 주방 카운터 관련 변수들
+    private KitchenCounter currentKitchenCounter; // 현재 사용 중인 주방 카운터
+    private bool isWaitingAtKitchenCounter = false; // 주방 카운터에서 대기 중인지 여부
+    
+    // 주방 카운터 관련 공개 프로퍼티
+    public bool IsWaitingAtKitchenCounter => isWaitingAtKitchenCounter;
+    
     [Header("UI 디버그")]
     [Tooltip("모든 AI 머리 위에 행동 상태 텍스트 표시")]
     [SerializeField] private bool debugUIEnabled = true;
@@ -150,7 +157,8 @@ public class AIAgent : MonoBehaviour
         Sleeping,            // 침대에서 수면
         MovingToSunbed,      // 선베드로 이동
         UsingSunbed,         // 선베드 사용 중
-        MovingToKitchen,     // 식당으로 이동
+        MovingToKitchenCounter, // 주방 카운터로 이동
+        WaitingAtKitchenCounter, // 주방 카운터에서 대기
         MovingToChair,       // 의자로 이동
         Eating               // 식사 중
     }
@@ -437,46 +445,46 @@ public class AIAgent : MonoBehaviour
                 if (hour >= 11 && hour <= 16)
                 {
                     float randomValue = Random.value;
-                    if (randomValue < 0.15f)
+                    if (randomValue < 0.10f)
                     {
                         TransitionToState(AIState.MovingToQueue);
-                        Debug.Log($"AI {gameObject.name}: 11~16시, 방 없음, 대기열로 이동 (15%).");
+                        Debug.Log($"AI {gameObject.name}: 11~16시, 방 없음, 대기열로 이동 (10%).");
                     }
-                    else if (randomValue < 0.55f && hour >= 11 && hour <= 15)
+                    else if (randomValue < 0.25f && hour >= 11 && hour <= 15)
                     {
-                        // 선베드 사용 시도 (11-15시만, 40% 확률)
+                        // 선베드 사용 시도 (11-15시만, 15% 확률)
                         if (TryFindAvailableSunbedRoom())
                         {
-                            Debug.Log($"AI {gameObject.name}: 11~15시, 방 없음, 선베드 방으로 이동 (40%).");
+                            Debug.Log($"AI {gameObject.name}: 11~15시, 방 없음, 선베드 방으로 이동 (15%).");
                         }
                         else
                         {
                             TransitionToState(AIState.Wandering);
-                            Debug.Log($"AI {gameObject.name}: 11~15시, 방 없음, 선베드 없어서 배회 (40%).");
+                            Debug.Log($"AI {gameObject.name}: 11~15시, 방 없음, 선베드 없어서 배회 (15%).");
                         }
                     }
-                    else if (randomValue < 0.65f)
+                    else if (randomValue < 0.85f)
                     {
-                        // 식당으로 이동 시도
+                        // 식당으로 이동 시도 (60% 확률) ⭐ 임시 증가
                         if (TryFindAvailableKitchen())
                         {
-                            Debug.Log($"AI {gameObject.name}: 11~16시, 방 없음, 식당으로 이동 (10%).");
+                            Debug.Log($"AI {gameObject.name}: 11~16시, 방 없음, 식당으로 이동 (60%).");
                         }
                         else
                         {
                             TransitionToState(AIState.Wandering);
-                            Debug.Log($"AI {gameObject.name}: 11~16시, 방 없음, 식당 없어서 배회 (10%).");
+                            Debug.Log($"AI {gameObject.name}: 11~16시, 방 없음, 식당 없어서 배회 (60%).");
                         }
                     }
-                    else if (randomValue < 0.8f)
+                    else if (randomValue < 0.95f)
                     {
                         TransitionToState(AIState.Wandering);
-                        Debug.Log($"AI {gameObject.name}: 11~16시, 방 없음, 외부 배회 (45%).");
+                        Debug.Log($"AI {gameObject.name}: 11~16시, 방 없음, 외부 배회 (10%).");
                     }
                     else
                     {
                         TransitionToState(AIState.ReturningToSpawn);
-                        Debug.Log($"AI {gameObject.name}: 11~16시, 방 없음, 디스폰 (20%).");
+                        Debug.Log($"AI {gameObject.name}: 11~16시, 방 없음, 디스폰 (5%).");
                     }
                 }
                 else
@@ -556,8 +564,13 @@ public class AIAgent : MonoBehaviour
         
         // 15시까지만 선베드 사용하므로 17시에는 선베드 사용 중인 AI가 없음
 
-        // 식사 중인 AI는 강제로 식사 종료 후 퇴장
-        if (isEating)
+        // 주방 카운터 대기 중이거나 식사 중인 AI는 강제로 종료 후 퇴장
+        if (isWaitingAtKitchenCounter || currentState == AIState.MovingToKitchenCounter || currentState == AIState.WaitingAtKitchenCounter)
+        {
+            Debug.Log($"AI {gameObject.name}: 17:00, 주방 카운터 관련 상태이므로 강제 종료 후 퇴장 (상태: {currentState}).");
+            ForceFinishKitchenActivity();
+        }
+        else if (isEating)
         {
             Debug.Log($"AI {gameObject.name}: 17:00, 식사 중이므로 강제 종료 후 퇴장 (상태: {currentState}).");
             ForceFinishEating();
@@ -825,8 +838,11 @@ public class AIAgent : MonoBehaviour
             case AIState.UsingSunbed:
                 // 선베드 사용 중 - 별도 처리 불필요
                 break;
-            case AIState.MovingToKitchen:
-                // 식당으로 이동 중 - MoveToKitchenBehavior 코루틴에서 처리
+            case AIState.MovingToKitchenCounter:
+                // 주방 카운터로 이동 중 - MoveToKitchenCounterBehavior 코루틴에서 처리
+                break;
+            case AIState.WaitingAtKitchenCounter:
+                // 주방 카운터에서 대기 중 - 별도 처리 불필요
                 break;
             case AIState.MovingToChair:
                 // 의자로 이동 중 - MoveToChairBehavior 코루틴에서 처리
@@ -1059,11 +1075,14 @@ public class AIAgent : MonoBehaviour
             case AIState.UsingSunbed:
                 // 선베드 사용 상태 - 별도의 코루틴 불필요
                 break;
-            case AIState.MovingToKitchen:
-                if (currentKitchenTransform != null)
+            case AIState.MovingToKitchenCounter:
+                if (currentKitchenCounter != null)
                 {
-                    eatingCoroutine = StartCoroutine(MoveToKitchenBehavior());
+                    eatingCoroutine = StartCoroutine(MoveToKitchenCounterBehavior());
                 }
+                break;
+            case AIState.WaitingAtKitchenCounter:
+                // 주방 카운터에서 대기 - 별도 처리 불필요
                 break;
             case AIState.MovingToChair:
                 if (currentChairTransform != null)
@@ -1104,7 +1123,8 @@ public class AIAgent : MonoBehaviour
             AIState.Sleeping => $"룸 {currentRoomIndex + 1}번 침대에서 수면 중",
             AIState.MovingToSunbed => $"룸 {currentRoomIndex + 1}번 선베드로 이동 중",
             AIState.UsingSunbed => $"룸 {currentRoomIndex + 1}번 선베드 사용 중",
-            AIState.MovingToKitchen => "식당으로 이동 중",
+            AIState.MovingToKitchenCounter => "주방 카운터로 이동 중",
+            AIState.WaitingAtKitchenCounter => "주방 카운터에서 대기 중",
             AIState.MovingToChair => "의자로 이동 중",
             AIState.Eating => "식사 중",
             _ => "알 수 없는 상태"
@@ -2326,56 +2346,128 @@ public class AIAgent : MonoBehaviour
 
     #region 식당 관련 메서드
     /// <summary>
-    /// 사용 가능한 식당을 찾아서 배정합니다.
+    /// 사용 가능한 주방 카운터를 찾아서 대기열에 진입합니다.
     /// </summary>
     private bool TryFindAvailableKitchen()
     {
-        // Kitchen 태그를 가진 오브젝트들 찾기
-        GameObject[] kitchens = GameObject.FindGameObjectsWithTag("Kitchen");
+        // KitchenCounter 컴포넌트를 가진 오브젝트들 찾기
+        KitchenCounter[] kitchenCounters = FindObjectsByType<KitchenCounter>(FindObjectsSortMode.None);
         
-        if (kitchens.Length == 0)
+        if (kitchenCounters.Length == 0)
         {
-            Debug.Log($"AI {gameObject.name}: 사용 가능한 식당 없음.");
+            Debug.Log($"AI {gameObject.name}: 사용 가능한 주방 카운터 없음.");
             return false;
         }
 
-        // 각 식당에서 사용 가능한 의자 찾기
-        foreach (GameObject kitchen in kitchens)
+        // 가장 가까운 주방 카운터 찾기
+        KitchenCounter closestCounter = null;
+        float closestDistance = float.MaxValue;
+
+        foreach (KitchenCounter counter in kitchenCounters)
         {
-            if (kitchen == null) continue;
+            if (counter == null) continue;
 
-            // 해당 식당의 KitchenChair들 찾기
-            Transform[] chairs = kitchen.GetComponentsInChildren<Transform>();
-            List<Transform> availableChairs = new List<Transform>();
-
-            foreach (Transform child in chairs)
+            float distance = Vector3.Distance(transform.position, counter.transform.position);
+            if (distance < closestDistance)
             {
-                if (child.CompareTag("KitchenChair"))
-                {
-                    // 의자가 사용 중인지 확인 (다른 AI가 사용 중이 아닌지)
-                    if (!IsChairOccupied(child))
-                    {
-                        availableChairs.Add(child);
-                    }
-                }
-            }
-
-            if (availableChairs.Count > 0)
-            {
-                // 랜덤하게 의자 선택
-                Transform selectedChair = availableChairs[Random.Range(0, availableChairs.Count)];
-                currentKitchenTransform = kitchen.transform;
-                currentChairTransform = selectedChair;
-                preChairPosition = transform.position;
-                preChairRotation = transform.rotation;
-                
-                Debug.Log($"AI {gameObject.name}: 식당 {kitchen.name}의 의자 {selectedChair.name} 선택됨.");
-                TransitionToState(AIState.MovingToKitchen);
-                return true;
+                closestDistance = distance;
+                closestCounter = counter;
             }
         }
 
-        Debug.Log($"AI {gameObject.name}: 사용 가능한 의자가 있는 식당 없음.");
+        if (closestCounter != null)
+        {
+            // 주방 카운터 대기열에 진입 시도
+            if (closestCounter.TryJoinQueue(this))
+            {
+                currentKitchenCounter = closestCounter;
+                
+                // 해당 주방에서 사용 가능한 의자 미리 선택
+                if (FindAvailableChairInKitchen(closestCounter, out Transform selectedChair, out Transform kitchen))
+                {
+                    currentKitchenTransform = kitchen;
+                    currentChairTransform = selectedChair;
+                    // 위치 저장은 의자로 이동할 때 하도록 변경 (MoveToChairBehavior에서 처리)
+                    
+                    Debug.Log($"AI {gameObject.name}: 주방 카운터 {closestCounter.name} 대기열 진입 성공, 의자 {selectedChair.name} 예약됨.");
+                    TransitionToState(AIState.MovingToKitchenCounter);
+                    return true;
+                }
+                else
+                {
+                    // 의자가 없으면 대기열에서 나가기
+                    closestCounter.LeaveQueue(this);
+                    Debug.Log($"AI {gameObject.name}: 사용 가능한 의자가 없어 대기열에서 나감.");
+                    return false;
+                }
+            }
+            else
+            {
+                Debug.Log($"AI {gameObject.name}: 주방 카운터 {closestCounter.name} 대기열이 가득 참.");
+                return false;
+            }
+        }
+
+        Debug.Log($"AI {gameObject.name}: 사용 가능한 주방 카운터 없음.");
+        return false;
+    }
+
+    /// <summary>
+    /// 주방에서 사용 가능한 의자 찾기 (단순화된 버전)
+    /// </summary>
+    private bool FindAvailableChairInKitchen(KitchenCounter counter, out Transform selectedChair, out Transform kitchen)
+    {
+        selectedChair = null;
+        kitchen = null;
+
+        // 모든 KitchenChair 태그 오브젝트 직접 찾기
+        GameObject[] allChairs = GameObject.FindGameObjectsWithTag("KitchenChair");
+        
+        Debug.Log($"AI {gameObject.name}: 전체 KitchenChair 개수: {allChairs.Length}");
+        
+        if (allChairs.Length == 0)
+        {
+            Debug.Log($"AI {gameObject.name}: KitchenChair 태그를 가진 오브젝트가 없습니다.");
+            return false;
+        }
+
+        List<Transform> availableChairs = new List<Transform>();
+
+        foreach (GameObject chairObj in allChairs)
+        {
+            if (chairObj == null) continue;
+
+            // 카운터와 의자가 너무 멀지 않은지 확인 (50미터 이내)
+            float distance = Vector3.Distance(counter.transform.position, chairObj.transform.position);
+            if (distance > 50f) 
+            {
+                Debug.Log($"AI {gameObject.name}: 의자 {chairObj.name}가 너무 멀음 (거리: {distance:F1}m)");
+                continue;
+            }
+
+            // 의자가 사용 중인지 확인
+            if (!IsChairOccupied(chairObj.transform))
+            {
+                availableChairs.Add(chairObj.transform);
+                Debug.Log($"AI {gameObject.name}: 사용 가능한 의자 발견: {chairObj.name} (거리: {distance:F1}m)");
+            }
+            else
+            {
+                Debug.Log($"AI {gameObject.name}: 의자 {chairObj.name}는 사용 중");
+            }
+        }
+
+        if (availableChairs.Count > 0)
+        {
+            // 랜덤하게 의자 선택
+            selectedChair = availableChairs[Random.Range(0, availableChairs.Count)];
+            kitchen = selectedChair; // 의자 자체를 kitchen으로 설정 (단순화)
+            
+            Debug.Log($"AI {gameObject.name}: 의자 선택 완료: {selectedChair.name} (총 {availableChairs.Count}개 중 선택)");
+            return true;
+        }
+
+        Debug.Log($"AI {gameObject.name}: 사용 가능한 의자가 없습니다. (전체: {allChairs.Length}개, 사용 가능: 0개)");
         return false;
     }
 
@@ -2397,7 +2489,139 @@ public class AIAgent : MonoBehaviour
     }
 
     /// <summary>
-    /// 식당으로 이동하는 코루틴
+    /// 주방 카운터로 이동하는 코루틴
+    /// </summary>
+    private IEnumerator MoveToKitchenCounterBehavior()
+    {
+        if (currentKitchenCounter == null)
+        {
+            Debug.LogError($"AI {gameObject.name}: 주방 카운터가 null입니다.");
+            DetermineBehaviorByTime();
+            yield break;
+        }
+
+        Debug.Log($"AI {gameObject.name}: 주방 카운터 {currentKitchenCounter.name} 대기열 위치로 이동 시작");
+
+        // 대기열 위치에 실제로 도착할 때까지 대기
+        float timeout = 15f;
+        float timer = 0f;
+        
+        // NavMeshAgent가 대기열 위치를 설정받을 때까지 잠시 대기
+        yield return new WaitForSeconds(0.1f);
+        
+        while (true)
+        {
+            // 타임아웃 체크
+            if (timer >= timeout)
+            {
+                Debug.LogWarning($"AI {gameObject.name}: 주방 카운터 대기열 위치 이동 타임아웃");
+                // 대기열에서 나가기
+                if (currentKitchenCounter != null)
+                {
+                    currentKitchenCounter.LeaveQueue(this);
+                }
+                CleanupKitchenVariables();
+                DetermineBehaviorByTime();
+                yield break;
+            }
+            
+            // NavMeshAgent가 유효하고 경로가 설정되었는지 확인
+            if (agent != null && agent.enabled && agent.isOnNavMesh)
+            {
+                // 경로가 계산 중이 아니고, 목적지에 도착했는지 확인
+                if (!agent.pathPending && agent.remainingDistance <= arrivalDistance)
+                {
+                    Debug.Log($"AI {gameObject.name}: 주방 카운터 대기열 위치 도착 완료");
+                    break;
+                }
+            }
+            
+            timer += Time.deltaTime;
+            yield return null;
+        }
+
+        // 대기열 위치에 실제로 도착한 후 대기 상태로 전환
+        Debug.Log($"AI {gameObject.name}: 주방 카운터 대기열에서 대기 시작");
+        isWaitingAtKitchenCounter = true;
+        
+        // 주방 카운터에 도착했음을 알림 (서비스 시작 가능)
+        if (currentKitchenCounter != null)
+        {
+            Debug.Log($"AI {gameObject.name}: 주방 카운터에 도착 완료, 서비스 대기 중");
+            // 카운터의 ProcessCustomerQueue가 자동으로 호출되어 서비스 시작 확인
+        }
+        
+        TransitionToState(AIState.WaitingAtKitchenCounter);
+    }
+
+    /// <summary>
+    /// 주방 카운터 서비스 완료 시 호출 (KitchenCounter에서 호출)
+    /// </summary>
+    public void OnKitchenServiceComplete()
+    {
+        Debug.Log($"AI {gameObject.name}: 주방 카운터 서비스 완료, 주문 결제 처리");
+        
+        isWaitingAtKitchenCounter = false;
+        
+        // 주문 결제 처리 (100원, 명성도 50)
+        ProcessKitchenOrderPayment();
+        
+        // 의자로 이동
+        if (currentChairTransform != null)
+        {
+            TransitionToState(AIState.MovingToChair);
+        }
+        else
+        {
+            Debug.LogError($"AI {gameObject.name}: 예약된 의자가 없습니다.");
+            CleanupKitchenVariables();
+            DetermineBehaviorByTime();
+        }
+    }
+    
+    /// <summary>
+    /// 주방 주문 결제 처리
+    /// </summary>
+    private void ProcessKitchenOrderPayment()
+    {
+        int orderPrice = 100;      // 주문 가격 100원
+        int orderReputation = 50;  // 명성도 50
+        string kitchenOrderID = "KITCHEN_ORDER"; // 주방 주문 고유 ID
+        
+        // PaymentSystem을 통해 결제 처리
+        var paymentSystem = PaymentSystem.Instance;
+        if (paymentSystem != null)
+        {
+            // 결제 정보를 PaymentSystem에 추가
+            paymentSystem.AddPayment(gameObject.name, orderPrice, kitchenOrderID, orderReputation);
+            
+            // 결제 처리 실행
+            int totalAmount = paymentSystem.ProcessPayment(gameObject.name);
+            
+            Debug.Log($"AI {gameObject.name}: 주방 주문 결제 완료 - 총 금액: {totalAmount}원, 명성도: {orderReputation}");
+        }
+        else
+        {
+            Debug.LogError($"AI {gameObject.name}: PaymentSystem을 찾을 수 없습니다.");
+        }
+    }
+
+    /// <summary>
+    /// 주방 관련 변수들 정리
+    /// </summary>
+    private void CleanupKitchenVariables()
+    {
+        currentKitchenCounter = null;
+        currentKitchenTransform = null;
+        currentChairTransform = null;
+        isWaitingAtKitchenCounter = false;
+        isEating = false;
+        preChairPosition = Vector3.zero;
+        preChairRotation = Quaternion.identity;
+    }
+
+    /// <summary>
+    /// 식당으로 이동하는 코루틴 (사용하지 않음 - 호환성을 위해 유지)
     /// </summary>
     private IEnumerator MoveToKitchenBehavior()
     {
@@ -2447,6 +2671,11 @@ public class AIAgent : MonoBehaviour
         }
 
         Debug.Log($"AI {gameObject.name}: 의자 {currentChairTransform.name}로 이동 시작");
+
+        // 의자로 이동하기 전 현재 위치 저장 (정확한 위치 기록)
+        preChairPosition = transform.position;
+        preChairRotation = transform.rotation;
+        Debug.Log($"AI {gameObject.name}: 의자 이동 전 위치 저장 - 위치: {preChairPosition}, 회전: {preChairRotation.eulerAngles}");
 
         // 의자 위치로 이동
         agent.SetDestination(currentChairTransform.position);
@@ -2536,8 +2765,10 @@ public class AIAgent : MonoBehaviour
         }
 
         // 저장된 위치로 복귀
+        Debug.Log($"AI {gameObject.name}: 식사 완료 후 이전 위치로 복귀 - 목표 위치: {preChairPosition}");
         transform.position = preChairPosition;
         transform.rotation = preChairRotation;
+        Debug.Log($"AI {gameObject.name}: 복귀 완료 - 현재 위치: {transform.position}");
 
         // 식사 상태 해제
         isEating = false;
@@ -2560,6 +2791,35 @@ public class AIAgent : MonoBehaviour
     /// <summary>
     /// 17시 강제 디스폰 시 식사를 강제로 종료합니다.
     /// </summary>
+    /// <summary>
+    /// 주방 카운터 관련 활동 강제 종료
+    /// </summary>
+    private void ForceFinishKitchenActivity()
+    {
+        Debug.Log($"AI {gameObject.name}: 17시 강제 주방 활동 종료");
+
+        // 주방 카운터 대기열에서 제거
+        if (currentKitchenCounter != null)
+        {
+            currentKitchenCounter.LeaveQueue(this);
+        }
+
+        // NavMeshAgent 상태 복원
+        if (agent != null)
+        {
+            agent.isStopped = false;
+        }
+
+        // 주방 관련 변수들 정리
+        CleanupKitchenVariables();
+
+        // 강제 디스폰
+        TransitionToState(AIState.ReturningToSpawn);
+        agent.SetDestination(spawnPoint.position);
+        
+        Debug.Log($"AI {gameObject.name}: 주방 활동 강제 종료 완료");
+    }
+
     private void ForceFinishEating()
     {
         if (!isEating)
@@ -2570,7 +2830,7 @@ public class AIAgent : MonoBehaviour
         // NavMeshAgent 다시 활성화
         if (agent != null)
         {
-            agent.enabled = true;
+            agent.isStopped = false;
         }
 
         // 저장된 위치로 복귀
@@ -2729,6 +2989,30 @@ public class AIAgent : MonoBehaviour
         }
         
         // 식사 상태 정리 (GameObject 비활성화 시에는 코루틴 시작 없이)
+        // 주방 카운터 관련 상태 정리
+        if (isWaitingAtKitchenCounter || currentKitchenCounter != null)
+        {
+            Debug.Log($"AI {gameObject.name}: CleanupResources에서 주방 카운터 상태 정리");
+            
+            // 주방 카운터 대기열에서 제거
+            if (currentKitchenCounter != null)
+            {
+                currentKitchenCounter.LeaveQueue(this);
+            }
+            
+            // NavMeshAgent 이동 재시작
+            if (agent != null)
+            {
+                agent.isStopped = false;
+                Debug.Log($"AI {gameObject.name}: 주방 카운터 활동 종료 - NavMeshAgent 이동 재시작");
+            }
+            
+            // 주방 관련 변수들 정리
+            CleanupKitchenVariables();
+            
+            Debug.Log($"AI {gameObject.name}: 주방 카운터 상태 정리 완료");
+        }
+        
         if (isEating)
         {
             Debug.Log($"AI {gameObject.name}: CleanupResources에서 식사 상태 정리");
@@ -2823,6 +3107,10 @@ public class AIAgent : MonoBehaviour
         currentChairTransform = null;
         preChairPosition = Vector3.zero;
         preChairRotation = Quaternion.identity;
+        
+        // 주방 카운터 관련 초기화
+        currentKitchenCounter = null;
+        isWaitingAtKitchenCounter = false;
 
         if (agent != null)
         {

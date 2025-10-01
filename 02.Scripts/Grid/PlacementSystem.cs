@@ -1,8 +1,9 @@
+using JY;
 using System.Collections.Generic;
-using ZLinq;
 using UnityEngine;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
+using ZLinq;
 
 public class PlacementSystem : MonoBehaviour
 {
@@ -59,6 +60,13 @@ public class PlacementSystem : MonoBehaviour
     public Renderer[] objRenderers;
     [SerializeField] private Material previewMaterialInstance;
 
+    [Header("NavMesh 업데이트 최적화")]
+    [SerializeField] private AutoNavMeshBaker navMeshBaker;
+    [Tooltip("건축 후 NavMesh 업데이트까지의 대기 시간(초)")]
+    [SerializeField] private float navMeshRebuildDelay = 0.5f;
+    private bool navMeshNeedsRebuild = false;
+    private float navMeshRebuildTimer = 0f;
+
     /// <summary>
     /// 싱글톤 패턴 사용
     /// </summary>
@@ -111,6 +119,22 @@ public class PlacementSystem : MonoBehaviour
         mousePosition = inputManager.GetSelectedMapPosition();
         gridPosition = grid.WorldToCell(inputManager.GetSelectedMapPosition());
         GridPositionYandFloor();
+
+        if (navMeshNeedsRebuild)
+        {
+            navMeshRebuildTimer -= Time.unscaledDeltaTime;
+            if (navMeshRebuildTimer <= 0f)
+            {
+                navMeshNeedsRebuild = false; // 플래그를 다시 false로
+                navMeshBaker?.RebuildNavMesh(); // 타이머가 끝나면 딱 한 번만 실행
+            }
+        }
+    }
+
+    public void MarkNavMeshDirty()
+    {
+        navMeshNeedsRebuild = true;
+        navMeshRebuildTimer = navMeshRebuildDelay; // 타이머 리셋
     }
 
     #region GridPosition y값 변환
@@ -1318,9 +1342,7 @@ public class PlacementSystem : MonoBehaviour
 
         // GridData에서 데이터 제거
         if (selectedData.RemoveObjectByIndex(objectIndex))
-        {
-            // 주방 감지기는 ObjectPlacer에서 실제 오브젝트로 처리됩니다
-            
+        {            
             // ObjectPlacer에서 오브젝트 제거
             objectPlacer.RemoveObject(objectIndex);
             PlayerWallet.Instance.AddMoney(objectData.BuildPrice);

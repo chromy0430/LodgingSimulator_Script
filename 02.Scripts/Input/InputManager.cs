@@ -374,14 +374,33 @@ public class InputManager : MonoBehaviour
         }
 
         Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+        if (Physics.Raycast(ray, out RaycastHit hit, 100f, objectLayer))
+        {
+            Transform currentTransform = hit.collider.transform;
+
+            // [핵심 수정]
+            // 레이캐스트에 맞은 지점부터 시작해서 부모로 거슬러 올라가며,
+            // ObjectPlacer가 관리하는 placedGameObjects 리스트에 포함된 오브젝트를 찾습니다.
+            while (currentTransform != null)
+            {
+                if (ObjectPlacer.Instance.placedGameObjects.Contains(currentTransform.gameObject))
+                {
+                    // 리스트에서 일치하는 오브젝트를 찾으면 그것이 바로 우리가 삭제할 대상입니다.
+                    return currentTransform.gameObject;
+                }
+                // 못 찾으면 한 단계 위 부모로 이동하여 다시 검사합니다.
+                currentTransform = currentTransform.parent;
+            }
+        }
+
+        /*Ray ray = cam.ScreenPointToRay(Input.mousePosition);
         if (Physics.Raycast(ray, out RaycastHit hit2, 100f, objectLayer))
         {
             // 클릭한 오브젝트의 루트 오브젝트 반환
             GameObject clickedObject = hit2.collider.gameObject;
             //Debug.Log($"선택된 오브젝트 : {clickedObject}");
             return clickedObject.transform.root.gameObject;
-        }
-
+        }*/
         return null;
     }
 

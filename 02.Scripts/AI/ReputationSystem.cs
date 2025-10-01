@@ -21,7 +21,11 @@ namespace JY
         [SerializeField] private TextMeshProUGUI currentGradeText;
         [Tooltip("UI 텍스트 형식")]
         [SerializeField] private string textFormat = "Grade: {0} {1}"; // {0}: 명성도, {1}: 등급
-        
+
+        [Tooltip("획득한 명성도 표시")]
+        [SerializeField] private RectTransform reputationTextTransform;
+        [SerializeField] private Color floatingTextColor;
+
         [Header("등급 설정")]
         [Tooltip("각 등급에 필요한 최소 명성도")]
         [SerializeField] private int[] gradeThresholds = {0, 100, 300, 500, 1000, 2000, 3000};
@@ -116,7 +120,13 @@ namespace JY
             {
                 DebugLog($"등급 상승! {prevGrade} → {newGrade}", true);
             }
-            
+
+            if (FloatingTextManager.Instance != null && reputationTextTransform != null && amount > 0)
+            {
+                Debug.Log("***************************명성도 추가***************************");
+                FloatingTextManager.Instance.Show($"+{amount}", floatingTextColor, reputationTextTransform.position);
+            }
+
             UpdateUI();
             OnReputationChanged?.Invoke(currentReputation);
         }

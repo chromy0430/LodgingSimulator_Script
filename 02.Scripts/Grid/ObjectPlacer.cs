@@ -11,22 +11,23 @@ public class ObjectPlacer : MonoBehaviour
     public Ease destroyEase = Ease.InElastic;
     public static ObjectPlacer Instance { get; set; }
 
+    private ObjectPoolManager objectPool;
+
     private void Awake()
     {
         // 싱글톤 설정
-        if (Instance == null)
-        {
-            Instance = this;
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        if (Instance == null) { Instance = this; }
+        else { Destroy(gameObject); }
     }
 
     private void Start()
     {
-        sequence = DOTween.Sequence();
+        // 싱글톤 인스턴스 참조
+        objectPool = ObjectPoolManager.Instance;
+        if (objectPool == null)
+        {
+            Debug.LogError("씬에 ObjectPoolManager가 존재하지 않습니다!");
+        }
     }
 
     [SerializeField] public List<GameObject> placedGameObjects = new();
@@ -43,18 +44,17 @@ public class ObjectPlacer : MonoBehaviour
     /// <returns></returns>
     public int PlaceObject(GameObject prefab, Vector3 position, Quaternion rotation, int? floorOverride = null)
     {
-        GameObject newObject = Instantiate(prefab); //, BatchedObj.transform, true);
+        //GameObject newObject = Instantiate(prefab); //, BatchedObj.transform, true);
+        GameObject newObject = objectPool.Get(prefab, position, rotation);
+
 
         // DOTween 애니메이션을 위해 오브젝트의 시작 위치를 목표 위치보다 높게 설정
         Vector3 startPosition = new Vector3(position.x, position.y + fallHeight, position.z);
         newObject.transform.position = startPosition;
-
-        /*newObject.transform.position = position;*/
-
-        Debug.Log($"여기에 설치 {position}");
-
         newObject.transform.rotation = rotation;
-        
+
+        // 반환 시 이상하게 되면 이부분 삭제 
+        newObject.transform.localScale = Vector3.one;
 
         newObject.transform.DOMove(position, fallDuration)
                  .SetEase(fallEase).SetUpdate(true);
@@ -66,15 +66,10 @@ public class ObjectPlacer : MonoBehaviour
         // 현재 층에 따라 레이어 설정
         int floorToSet = floorOverride ?? changeFloorSystem.currentFloor;
         string layerName = $"{floorToSet}F";
-
         int layer = LayerMask.NameToLayer(layerName);
         int stairColliderLayer = LayerMask.NameToLayer("StairCollider");
 
-        if (layer == -1)
-        {
-            Debug.LogError($"Layer {layerName} not found!");
-        }
-        else
+        if (layer != -1)
         {
             // 모든 자손 오브젝트의 레이어 변경
             foreach (Transform child in newObject.transform.GetComponentsInChildren<Transform>(true))
@@ -119,14 +114,10 @@ public class ObjectPlacer : MonoBehaviour
             Debug.Log("❌ KitchenDetector.Instance가 null입니다! 씬에 KitchenDetector가 있는지 확인하세요.");
         }
 
-        navMeshBaker?.RebuildNavMesh();
+        PlacementSystem.Instance.MarkNavMeshDirty();
+        //navMeshBaker?.RebuildNavMesh();
         return index;
     }
-
-    // Sequence 풀링을 위한 리스트
-    private List<Sequence> activeSequences = new List<Sequence>();
-    // Sequence 생성 및 풀링 관리
-    Sequence sequence;
 
     /// <summary>
     /// 오브젝트들을 삭제한다.
@@ -134,36 +125,28 @@ public class ObjectPlacer : MonoBehaviour
     /// <param name="index"></param>
     public void RemoveObject(int index)
     {
-        navMeshBaker?.RebuildNavMesh();
+        PlacementSystem.Instance.MarkNavMeshDirty();
+        //navMeshBaker?.RebuildNavMesh();
 
         if (index >= 0 && index < placedGameObjects.Count)
         {
 
             GameObject obj = placedGameObjects[index];
             if (obj != null)
-            {                
-                activeSequences.Add(sequence);
-
-                // DOScale 애니메이션 추가 (0.3초 동안 스케일 0으로 축소)
-                sequence.Append(obj.transform.DOScale(Vector3.zero, 0.3f).SetEase(Ease.InBack).SetUpdate(true));
-
-                // 애니메이션 완료 후 실행될 콜백 추가
-                sequence.OnComplete(() =>
-                {
-                    // 주방 감지기에게 가구 제거 알림
-                    if (JY.KitchenDetector.Instance != null)
+            {
+                obj.transform.DOScale(Vector3.zero, 0.3f).SetEase(destroyEase).SetUpdate(true)
+                    .OnComplete(() =>
                     {
-                        Vector3 objectPosition = obj.transform.position;
-                        JY.KitchenDetector.Instance.OnFurnitureRemoved(obj, objectPosition);
-                    }
-                    
-                    // GameObject 파괴
-                    Destroy(obj);
-                    // 효과 재생
-                    spawnEffect.OnBuildingPlaced(obj.transform.position);
-                    activeSequences.Remove(sequence);
-                    sequence.Kill();
-                });                
+                        if (KitchenDetector.Instance != null)
+                        {
+                            KitchenDetector.Instance.OnFurnitureRemoved(obj, obj.transform.position);
+                        }
+
+                        // *** 수정: Destroy 대신 objectPool.Return 사용 ***
+                        objectPool.Return(obj);
+
+                        spawnEffect.OnBuildingPlaced(obj.transform.position);
+                    });
             }
             placedGameObjects[index] = null; // 참조 제거 (선택적으로 리스트에서 완전히 제거 가능)            
         }
@@ -179,18 +162,4 @@ public class ObjectPlacer : MonoBehaviour
         return placedGameObjects.IndexOf(obj);
     }
 
-    // 모든 Sequence 정리 (필요 시 호출)
-    public void CleanupSequences()
-    {
-        foreach (var sequence in activeSequences)
-        {
-            sequence.Kill();
-        }
-        activeSequences.Clear();
-    }
-
-    private void OnDestroy()
-    {
-        CleanupSequences(); // MonoBehaviour 파괴 시 모든 Sequence 정리
-    }
 }

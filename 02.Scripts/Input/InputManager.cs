@@ -6,8 +6,8 @@ using UnityEngine.UI;
 
 public class InputManager : MonoBehaviour
 {
-    [Header("상호작용 시스템")]
-    [SerializeField] private ObjectInteractionUI interactionUI;
+    //[Header("상호작용 시스템")]
+    //[SerializeField] private ObjectInteractionUI interactionUI;
 
     [Header("컴포넌트")]
     [SerializeField] private PlacementSystem placementSystem;
@@ -133,7 +133,10 @@ public class InputManager : MonoBehaviour
         if (isDeleteMode)
             placementSystem.StopDeleteMode();
         else
-            placementSystem.StartDeleteMode();
+        {
+            placementSystem.StartDeleteMode();            
+        }
+        
     }
 
     private void ChangeBuildMode()
@@ -188,10 +191,10 @@ public class InputManager : MonoBehaviour
 
     private void HandleObjectSelection()
     {
-        if (interactionUI is not null && interactionUI.IsUIActive())
+        /*if (interactionUI is not null && interactionUI.IsUIActive())
         {
             return; // UI가 열려 있으면 다른 오브젝트 선택 무시
-        }
+        }*/
         
         GameObject clickedObject = GetClickedObject();
         
@@ -216,14 +219,14 @@ public class InputManager : MonoBehaviour
                 Debug.Log($"{clickedObject.name}는 {objectPosition}에 위치");
 
                 // interactionUI null 체크 추가
-                if (interactionUI != null)
+                /*if (interactionUI != null)
                 {
                     interactionUI.ShowInteractionUI(clickedObject, objectPosition);
                 }
                 else
                 {
                     Debug.LogError("InteractionUI가 할당되지 않았습니다! Inspector에서 할당해주세요.");
-                }
+                }*/
             }
         }
         else
@@ -231,7 +234,7 @@ public class InputManager : MonoBehaviour
             // 빈 공간 클릭 시 UI 숨김
             //if (interactionUI != null && interactionUI.IsUIActive()) interactionUI.HideInteractionUI();
             
-            if(clickedObject != null)  interactionUI.HideInteractionUI();
+            //if(clickedObject != null)  interactionUI.HideInteractionUI();
         }
     }
 

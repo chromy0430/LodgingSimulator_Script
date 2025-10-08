@@ -40,7 +40,7 @@ public class PlacementSystem : MonoBehaviour
     [SerializeField] public List<GameObject> gridVisualization;
     public List<Bounds> planeBounds;
     
-    [FormerlySerializedAs("plane")] [Header("플레인 리스트")]
+    [Header("플레인 리스트")]
     public List<GameObject> plane1f;
     public List<GameObject> plane2f;
     public List<GameObject> plane3f;
@@ -56,7 +56,7 @@ public class PlacementSystem : MonoBehaviour
     [SerializeField] private GameObject changeFloorButton;    
     
     [Header("미리보기 관련")]
-    [SerializeField] private GameObject highlightedObject;
+    public GameObject highlightedObject;
     public Renderer[] objRenderers;
     [SerializeField] private Material previewMaterialInstance;
 
@@ -1271,9 +1271,15 @@ public class PlacementSystem : MonoBehaviour
 
     public void StopDeleteMode()
     {
+        if (highlightedObject != null)
+        {
+            ResetObjectVisual(highlightedObject);
+            highlightedObject = null;
+        }
+
         inputManager.isDeleteMode = false;
         inputManager.OnClicked -= DeleteStructure;
-        inputManager.OnExit -= StopDeleteMode;
+        inputManager.OnExit -= StopDeleteMode;        
         mouseIndicator.SetActive(false); // 인디케이터 비활성화
         Debug.Log("삭제 모드 종료");
     }
@@ -1574,7 +1580,7 @@ public class PlacementSystem : MonoBehaviour
     }
 
     // 오브젝트 비주얼 복원
-    private void ResetObjectVisual(GameObject obj)
+    public void ResetObjectVisual(GameObject obj)
     {
         Renderer[] renderers = obj.GetComponentsInChildren<Renderer>();
         foreach (Renderer renderer in renderers)

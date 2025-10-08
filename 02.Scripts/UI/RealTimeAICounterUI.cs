@@ -25,7 +25,7 @@ namespace JY
         
         [Tooltip("중요한 이벤트만 로그 표시")]
         [SerializeField] private bool showImportantLogsOnly = true;
-        private string lastFormattedText = "";
+
         // 내부 변수
         private int lastAICount = -1;
         private AISpawner aiSpawner;

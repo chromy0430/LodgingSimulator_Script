@@ -12,7 +12,7 @@ public class TooltipManager : MonoBehaviour
 
     [SerializeField] private RectTransform tooltipRect => tooltipPanel.GetComponent<RectTransform>();
 
-    [SerializeField] private Vector2 offset = new Vector2(15f, -15f);
+    [SerializeField] private Vector2 offset = new Vector2(15f, 0f);
 
     private void Awake()
     {
@@ -36,6 +36,24 @@ public class TooltipManager : MonoBehaviour
         if (tooltipPanel != null && tooltipPanel.activeSelf)
         {
             Vector2 mousePosition = Input.mousePosition;
+
+            float tooltipWidth = tooltipRect.rect.width;
+            float tooltipHeight = tooltipRect.rect.height;
+
+            Vector2 newPosition = mousePosition + offset;
+
+            if (newPosition.x + tooltipWidth > Screen.width)
+            {
+                // 넘어간 만큼 왼쪽으로 이동시킵니다.
+                newPosition.x = Screen.width - tooltipWidth;
+            }
+
+            if (newPosition.y - tooltipHeight < 0)
+            {
+                // 넘어가지 않도록 마우스 위쪽으로 위치를 변경합니다.
+                newPosition.y = mousePosition.y + tooltipHeight;
+            }
+
             tooltipRect.position = mousePosition + offset;
         }
     }

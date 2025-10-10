@@ -26,10 +26,19 @@ public class CameraCon : MonoBehaviour
     [SerializeField] private CinemachineCamera cam;             // 카메라 참조
     [SerializeField] private Camera cam2;
     [SerializeField] private InputManager inputManager;
+
+    [SerializeField] private bool isStarting = false;
+    [SerializeField] private float transitionDuration = 1.5f;
+    [SerializeField] private Vector3 endCamPos;
+    [SerializeField] private Vector3 endCamRot;
+
     
-    
+
     private void Start()
     {
+        isStarting = true;
+        //Invoke("StartingMoveCamera", 3f);
+
         //Debug.Log($"{target.transform.position}부터 시작");
         if (cam is null)
         {
@@ -60,22 +69,42 @@ public class CameraCon : MonoBehaviour
 
     private void LateUpdate()
     {
-        // 카메라 위치 및 회전 적용
-        Vector3 targetPosition = new Vector3(
-            target is not null ? target.position.x : 0f,
-            offset.y,
-            target is not null ? target.position.z : 0f
-        );
+        if (!isStarting)
+        {
+            // 카메라 위치 및 회전 적용
+            Vector3 targetPosition = new Vector3(
+                target is not null ? target.position.x : 0f,
+                offset.y,
+                target is not null ? target.position.z : 0f
+            );
 
-        if (target is not null) target.transform.position = targetPosition;
-        
-        if (inputManager.IsPointerOverUI())  return;
-        
-        SmoothWheel();       // 줌 처리
-        HandleMovement();    // WASD 이동
-        HandleRotation();    // 마우스 우클릭 회전
-        CameraConfiner();    // 카메라가 경계에서 끼이는 버그 해결 
+            if (target is not null) target.transform.position = targetPosition;
+
+            if (inputManager.IsPointerOverUI()) return;
+
+            SmoothWheel();       // 줌 처리
+            HandleMovement();    // WASD 이동
+            HandleRotation();    // 마우스 우클릭 회전
+            CameraConfiner();    // 카메라가 경계에서 끼이는 버그 해결 
+        }
     }
+
+    /// <summary>
+    /// 게임 시작 시 카메라가 움직임
+    /// </summary>
+    public void StartingMoveCamera()
+    {
+        transform.DOLocalMove(endCamPos, transitionDuration)
+               .SetEase(Ease.InOutCubic).SetUpdate(true);
+
+        // 목표 로컬 각도로 회전
+        transform.DOLocalRotate(endCamRot, transitionDuration)
+            .SetEase(Ease.InOutCubic).SetUpdate(true).OnComplete(() =>
+            {
+                isStarting = false;
+            });
+    }
+
 
     /// <summary>
     /// 카메라가 경계에서 멈추는 버그 해결

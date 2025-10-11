@@ -5,8 +5,6 @@ using UnityEngine.UI;
 
 public class TutorialUIManager : MonoBehaviour
 {
-    public static TutorialUIManager Instance { get; private set; }
-
     [Header("UI 요소")]
     [SerializeField] private GameObject tutorialPanel; // 튜토리얼 전체 패널
     [SerializeField] private TextMeshProUGUI tutorialText; // 텍스트를 표시할 TextMeshPro UI
@@ -21,15 +19,9 @@ public class TutorialUIManager : MonoBehaviour
 
     private void Awake()
     {
-        // --- 싱글톤 패턴 구현 ---
-        if (Instance == null)
+        if (tutorialPanel != null)
         {
-            Instance = this;
-            // DontDestroyOnLoad(gameObject); // 씬이 바뀌어도 유지하려면 이 줄의 주석을 해제하세요.
-        }
-        else
-        {
-            Destroy(gameObject);
+            tutorialPanel.SetActive(false);
         }
     }
 

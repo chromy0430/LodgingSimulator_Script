@@ -60,13 +60,11 @@ public class AutoNavMeshBaker : MonoBehaviour
     {
         if (_navsurface == null)
         {
-            Debug.LogError("NavMeshSurface가 할당되지 않았습니다!");
             return;
         }
 
         if (tagsToBake == null || tagsToBake.Length == 0)
         {
-            Debug.LogError("NavMesh를 생성할 태그가 설정되지 않았습니다!");
             return;
         }
         
@@ -92,7 +90,6 @@ public class AutoNavMeshBaker : MonoBehaviour
 
             if (showDebugLogs)
             {
-                Debug.Log($"태그 '{tag}'에 {taggedObjects.Length}개의 오브젝트가 캐시되었습니다.");
             }
         }
     }
@@ -111,7 +108,6 @@ public class AutoNavMeshBaker : MonoBehaviour
                 
                 if (showDebugLogs)
                 {
-                    Debug.Log("오브젝트 변경 감지 - 네비메쉬 업데이트 중...");
                 }
             }
             
@@ -152,28 +148,37 @@ public class AutoNavMeshBaker : MonoBehaviour
     {
         if (_navsurface == null)
         {
-            Debug.LogError("NavMeshSurface가 할당되지 않았습니다!");
             yield break;
         }
 
-            // *** 수정된 부분 시작 ***
-            isBaking = true; // 베이킹 시작 플래그
-            if (showDebugLogs) Debug.Log("NavMesh 베이킹을 시작합니다...");
+        // *** 수정된 부분 시작 ***
+        isBaking = true; // 베이킹 시작 플래그
+        if (showDebugLogs) { }
 
+        // NavMesh 데이터가 없으면 새로 빌드
+        if (_navsurface.navMeshData == null)
+        {
+            _navsurface.BuildNavMesh();
+        }
+        else
+        {
             AsyncOperation operation = _navsurface.UpdateNavMesh(_navsurface.navMeshData);
 
             while (!operation.isDone)
             {
                 yield return null;
             }
+        }
 
-            if (showDebugLogs)
-            {
-                Debug.Log("NavMesh 업데이트 완료");
-            }
+        // NavMesh 통계 출력
+        var triangulation = NavMesh.CalculateTriangulation();
 
-            isBaking = false; // 베이킹 완료 플래그
-            // *** 수정된 부분 끝 ***        
+        if (showDebugLogs)
+        {
+        }
+
+        isBaking = false; // 베이킹 완료 플래그
+        // *** 수정된 부분 끝 ***        
 
         //isBaking = true;
 
@@ -194,7 +199,6 @@ public class AutoNavMeshBaker : MonoBehaviour
         
         if (showDebugLogs)
         {
-            Debug.Log("NavMesh 업데이트 완료");
         }*/        
         //isBaking = false;       
     }
@@ -206,7 +210,7 @@ public class AutoNavMeshBaker : MonoBehaviour
         // 이미 베이킹 중이면 재요청 무시
         if (isBaking)
         {
-            if (showDebugLogs) Debug.Log("이미 NavMesh 베이킹이 진행 중입니다. 재요청을 무시합니다.");
+            if (showDebugLogs) { }
             return;
         }
         StartCoroutine(BuildNavMeshAsync());
@@ -235,7 +239,6 @@ public class AutoNavMeshBaker : MonoBehaviour
         
         if (showDebugLogs)
         {
-            Debug.Log($"태그 '{tag}' 오브젝트 캐시 업데이트: {taggedObjects.Length}개");
         }
     }
 

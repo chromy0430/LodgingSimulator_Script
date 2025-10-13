@@ -19,12 +19,29 @@ namespace JY
         
         [Header("성능 및 안전 설정")]
         [Tooltip("FloodFill 최대 반복 횟수 (무한 루프 방지)")]
-        [Range(100, 5000)]
-        [SerializeField] private int maxFloodFillIterations = 1000;
+        [Range(100, 10000)]
+        [SerializeField] private int maxFloodFillIterations = 5000;
         
         [Tooltip("최대 방 크기 (무한 확장 방지)")]
-        [Range(50, 1000)]
-        [SerializeField] private int maxRoomSize = 200;
+        [Range(50, 2000)]
+        [SerializeField] private int maxRoomSize = 1000;
+        
+        [Header("방 탐색 범위 설정")]
+        [Tooltip("벽 경계면 탐색 최대 반경 (큰 방 인식을 위해 충분히 크게)")]
+        [Range(5, 50)]
+        [SerializeField] private int maxWallSearchRadius = 20;
+        
+        [Tooltip("벽 경계면 탐색 최대 셀 수")]
+        [Range(50, 500)]
+        [SerializeField] private int maxWallSearchCells = 300;
+        
+        [Tooltip("방 내부 탐색 최대 반경 (긴 방 인식을 위해 충분히 크게)")]
+        [Range(5, 50)]
+        [SerializeField] private int maxRoomInteriorRadius = 25;
+        
+        [Tooltip("방 내부 탐색 최대 셀 수")]
+        [Range(30, 500)]
+        [SerializeField] private int maxRoomInteriorCells = 200;
         
         [Header("디버그 설정")]
         [Tooltip("디버그 로그 표시 여부")]
@@ -638,7 +655,7 @@ namespace JY
          /// </summary>
          private void FindWallBoundariesAroundPosition(Vector3Int centerPos, HashSet<Vector3Int> walls, HashSet<Vector3Int> doors)
          {
-             DebugLog($"위치 {centerPos} 주변 벽 경계면 탐색 시작 (제한된 범위)", true);
+             DebugLog($"위치 {centerPos} 주변 벽 경계면 탐색 시작 (최대 반경: {maxWallSearchRadius}, 최대 셀: {maxWallSearchCells})", true);
              
              HashSet<Vector3Int> visited = new HashSet<Vector3Int>();
              Queue<Vector3Int> queue = new Queue<Vector3Int>();
@@ -648,17 +665,15 @@ namespace JY
              
              Vector3Int[] directions = GetDirections();
              int iterations = 0;
-             int maxSearchRadius = 6; // 탐색 반경을 줄여서 독립적인 방 생성
-             int maxSearchCells = 50; // 최대 탐색 셀 수 제한
              
-             while (queue.Count > 0 && iterations < maxFloodFillIterations && visited.Count < maxSearchCells)
+             while (queue.Count > 0 && iterations < maxFloodFillIterations && visited.Count < maxWallSearchCells)
              {
                  iterations++;
                  Vector3Int current = queue.Dequeue();
                  
                  // 중심점에서 너무 멀면 중단
                  float distance = Vector3Int.Distance(centerPos, current);
-                 if (distance > maxSearchRadius)
+                 if (distance > maxWallSearchRadius)
                  {
                      DebugLog($"탐색 반경 초과로 중단: {current} (거리: {distance:F1})", showScanLogs);
                      continue;
@@ -671,7 +686,7 @@ namespace JY
                      if (visited.Contains(neighbor)) continue;
                      
                      // 반경 체크
-                     if (Vector3Int.Distance(centerPos, neighbor) > maxSearchRadius)
+                     if (Vector3Int.Distance(centerPos, neighbor) > maxWallSearchRadius)
                          continue;
                      
                      visited.Add(neighbor);
@@ -700,14 +715,14 @@ namespace JY
                      }
                      
                      // 벽이나 문이 아닌 빈 공간이면 계속 탐색 (단, 반경 내에서만)
-                     if (!foundBoundary && Vector3Int.Distance(centerPos, neighbor) < maxSearchRadius)
+                     if (!foundBoundary && Vector3Int.Distance(centerPos, neighbor) < maxWallSearchRadius)
                      {
                          queue.Enqueue(neighbor);
                      }
                  }
              }
              
-             DebugLog($"벽 경계면 탐색 완료 - 반복: {iterations}회, 방문 셀: {visited.Count}개, 벽: {walls.Count}개, 문: {doors.Count}개", true);
+             DebugLog($"벽 경계면 탐색 완료 - 반복: {iterations}회, 방문 셀: {visited.Count}/{maxWallSearchCells}개, 벽: {walls.Count}개, 문: {doors.Count}개, 최대 반경: {maxWallSearchRadius}", true);
          }
          
          /// <summary>
@@ -716,7 +731,7 @@ namespace JY
          private void FindRoomInteriorByWallBoundaries(Vector3Int startPos, HashSet<Vector3Int> wallBoundaries, HashSet<Vector3Int> doorBoundaries,
              HashSet<Vector3Int> roomFloors, HashSet<Vector3Int> bedsInRoom, HashSet<Vector3Int> localVisited, HashSet<Vector3Int> globalVisited)
          {
-             DebugLog($"벽 경계면 기준 방 내부 탐색 시작: {startPos} (제한된 범위)", true);
+             DebugLog($"벽 경계면 기준 방 내부 탐색 시작: {startPos} (최대 반경: {maxRoomInteriorRadius}, 최대 셀: {maxRoomInteriorCells})", true);
              
             Queue<Vector3Int> queue = new Queue<Vector3Int>();
             queue.Enqueue(startPos);
@@ -725,17 +740,15 @@ namespace JY
              
              Vector3Int[] directions = GetDirections();
              int iterations = 0;
-             int maxInteriorRadius = 5; // 방 내부 탐색 반경 제한
-             int maxInteriorCells = 30; // 방 내부 최대 셀 수 제한
              
-             while (queue.Count > 0 && iterations < maxFloodFillIterations && roomFloors.Count < maxInteriorCells)
+             while (queue.Count > 0 && iterations < maxFloodFillIterations && roomFloors.Count < maxRoomInteriorCells)
              {
                  iterations++;
                  Vector3Int current = queue.Dequeue();
                  
                  // 시작점에서 너무 멀면 중단
                  float distance = Vector3Int.Distance(startPos, current);
-                 if (distance > maxInteriorRadius)
+                 if (distance > maxRoomInteriorRadius)
                  {
                      DebugLog($"방 내부 탐색 반경 초과로 중단: {current} (거리: {distance:F1})", showScanLogs);
                      continue;
@@ -772,7 +785,7 @@ namespace JY
                      
                      // 시작점에서 너무 멀면 스킵
                      float neighborDistance = Vector3Int.Distance(startPos, neighbor);
-                     if (neighborDistance > maxInteriorRadius)
+                     if (neighborDistance > maxRoomInteriorRadius)
                          continue;
                      
                      // 벽이나 문 경계에 막혔는지 확인
@@ -797,7 +810,7 @@ namespace JY
                  }
              }
              
-             DebugLog($"벽 경계면 기준 방 내부 탐색 완료 - 반복: {iterations}/{maxFloodFillIterations}회, 바닥: {roomFloors.Count}개, 침대: {bedsInRoom.Count}개, 최대 반경: {maxInteriorRadius}", true);
+             DebugLog($"벽 경계면 기준 방 내부 탐색 완료 - 반복: {iterations}/{maxFloodFillIterations}회, 바닥: {roomFloors.Count}/{maxRoomInteriorCells}개, 침대: {bedsInRoom.Count}개, 최대 반경: {maxRoomInteriorRadius}", true);
          }
          
          /// <summary>
@@ -2353,6 +2366,9 @@ namespace JY
                         sunbedRooms.Add(sunbedRoom);
                         DebugLog($"독립적인 Sunbed 방 생성: {sunbedRoom.roomId}");
                     }
+                    else
+                    {
+                    }
                 }
             }
             
@@ -2431,8 +2447,6 @@ namespace JY
             if (!showDebugLogs) return;
             
             if (showImportantLogsOnly && !isImportant) return;
-            
-            Debug.Log($"[RoomDetector] {message}");
         }
         
         /// <summary>

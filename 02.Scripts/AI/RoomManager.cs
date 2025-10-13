@@ -67,7 +67,6 @@ namespace JY
                 }
             }
             
-            DebugLog("방 관리 시스템 초기화 완료", true);
         }
         
         /// <summary>
@@ -97,11 +96,9 @@ namespace JY
                 }
             }
             
-            DebugLog($"총 {allRooms.Count}개의 방이 감지되었습니다.", true);
             
             if (allRooms.Count == 0)
             {
-                DebugLog($"'{roomTag}' 태그를 가진 방을 찾을 수 없습니다. 방 오브젝트에 태그가 설정되어 있는지 확인하세요.", true);
             }
         }
         
@@ -122,11 +119,9 @@ namespace JY
                 if (room.isSunbedRoom && room.fixedPrice > 0)
                 {
                     room.SetAsSunbedRoom(room.fixedPrice, room.fixedReputation);
-                    DebugLog($"새로운 Sunbed 방 {room.roomID}이(가) 등록되었습니다. 고정 가격: {room.fixedPrice}원, 고정 명성도: {room.fixedReputation}", true);
                 }
                 else
                 {
-                    DebugLog($"새로운 방 {room.roomID}이(가) 등록되었습니다.", showImportantLogsOnly);
                 }
             }
         }
@@ -149,7 +144,6 @@ namespace JY
             if (roomInfo.isSunbedRoom)
             {
                 roomContents.SetAsSunbedRoom(roomInfo.fixedPrice, roomInfo.fixedReputation);
-                DebugLog($"Sunbed 방 {roomInfo.roomId} 생성 완료. 고정 가격: {roomInfo.fixedPrice}원, 고정 명성도: {roomInfo.fixedReputation}", true);
             }
             
             RegisterNewRoom(roomContents);
@@ -163,7 +157,6 @@ namespace JY
             if (room != null && allRooms.Contains(room))
             {
                 allRooms.Remove(room);
-                DebugLog($"방 {room.roomID}이(가) 제거되었습니다.", showImportantLogsOnly);
             }
         }
 
@@ -177,17 +170,17 @@ namespace JY
             // 방이 이미 사용 중인지 확인
             if (room.IsRoomUsed)
             {
-                DebugLog($"{aiName}가 이미 사용 중인 방 {room.roomID}에 접근했습니다.");
                 return;
             }
             
             // 방 요금 계산 (방 가격 * 오늘의 배율)
+            int basePrice = room.TotalRoomPrice;
             int finalPrice = Mathf.RoundToInt(room.UseRoom() * priceMultiplier);
             
             // 방 명성도 가져오기
             int roomReputation = room.TotalRoomReputation;
             
-            DebugLog($"방 사용 보고 - AI: {aiName}, 방: {room.roomID}, 가격: {finalPrice}원, 방 명성도: {roomReputation}", true);
+            Debug.Log($"[방 가격 정보] AI: {aiName}, 방 ID: {room.roomID}, 기본 가격: {basePrice}원, 가격 배율: {priceMultiplier:F2}, 최종 가격: {finalPrice}원, 명성도: {roomReputation}");
             
             // 로그 추가
             if (showUsageLogs)
@@ -205,12 +198,10 @@ namespace JY
             // 결제 시스템에 요금과 명성도 추가
             if (paymentSystem != null)
             {
-                DebugLog($"PaymentSystem에 결제 정보 추가 - AI: {aiName}, 방: {room.roomID}, 가격: {finalPrice}, 명성도: {roomReputation}");
                 paymentSystem.AddPayment(aiName, finalPrice, room.roomID, roomReputation);
             }
             else
             {
-                DebugLog("PaymentSystem을 찾을 수 없습니다!", true);
             }
         }
         
@@ -221,6 +212,7 @@ namespace JY
         {
             if (paymentSystem == null) return 0;
             
+            Debug.Log($"[결제 처리 시작] AI: {aiName} - PaymentSystem으로 결제 요청");
             int amount = paymentSystem.ProcessPayment(aiName);
             
             if (amount > 0 && showUsageLogs)
@@ -234,7 +226,11 @@ namespace JY
                     paymentLogs.RemoveAt(0);
                 }
                 
-                DebugLog(paymentLog, true);
+                Debug.Log($"[결제 완료] AI: {aiName}, 결제 금액: {amount}원");
+            }
+            else if (amount == 0)
+            {
+                Debug.Log($"[결제 경고] AI: {aiName}, 결제 금액이 0원입니다.");
             }
             
             return amount;
@@ -276,7 +272,6 @@ namespace JY
             {
                 roomCleaningStatus.Add(false);
             }
-            DebugLog("청소 시스템 초기화 완료", true);
         }
         
         /// <summary>
@@ -287,14 +282,12 @@ namespace JY
         {
             if (roomIndex < 0 || roomIndex >= allRooms.Count)
             {
-                DebugLog($"잘못된 방 인덱스: {roomIndex}", true);
                 return;
             }
             
             if (roomIndex < roomCleaningStatus.Count)
             {
                 roomCleaningStatus[roomIndex] = true;
-                DebugLog($"방 {allRooms[roomIndex].roomID} 청소 요청됨", true);
             }
         }
         
@@ -306,7 +299,6 @@ namespace JY
         {
             if (roomIndex < 0 || roomIndex >= allRooms.Count)
             {
-                DebugLog($"잘못된 방 인덱스: {roomIndex}", true);
                 return;
             }
             
@@ -314,7 +306,6 @@ namespace JY
             {
                 roomCleaningStatus[roomIndex] = false;
                 allRooms[roomIndex].ReleaseRoom(); // 방을 사용 가능 상태로 변경
-                DebugLog($"방 {allRooms[roomIndex].roomID} 청소 완료", true);
             }
         }
         
@@ -377,8 +368,6 @@ namespace JY
             if (!showDebugLogs) return;
             
             if (showImportantLogsOnly && !isImportant) return;
-            
-            Debug.Log($"[RoomManager] {message}");
         }
         
         #endregion

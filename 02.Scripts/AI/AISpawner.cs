@@ -92,7 +92,6 @@ namespace JY
             }
             else
             {
-                Debug.LogError("[AISpawner] TimeSystem을 찾을 수 없습니다!");
             }
         }
         
@@ -382,8 +381,6 @@ namespace JY
             if (!showDebugLogs) return;
             
             if (showImportantLogsOnly && !isImportant) return;
-            
-            Debug.Log($"[AISpawner] {message}");
         }
         
         #endregion

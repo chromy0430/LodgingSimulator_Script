@@ -18,6 +18,20 @@ public class NewTutorialGuide : MonoBehaviour
     private bool isWaitingForAction = false;
     private int initialObjectCount = 0; // 건설 감지를 위한 초기 오브젝트 수
 
+    public bool isTutorialFinish { get; set; } = false;
+    public static NewTutorialGuide Instance { get; private set; }
+
+    // wait 함수 캐싱 
+    WaitForSeconds waitSeconds = new WaitForSeconds(.001f);
+    WaitForEndOfFrame waitFrame = new WaitForEndOfFrame();
+
+    private void Awake()
+    {
+        if (Instance == null)
+            Instance = this;
+        else
+            Destroy(this);
+    }
 
     private void Start()
     {
@@ -26,9 +40,18 @@ public class NewTutorialGuide : MonoBehaviour
 
     private IEnumerator StartTutorialSequence()
     {
-        yield return new WaitForEndOfFrame();
-        Time.timeScale = 0f;
-        ShowNextStep();
+        yield return waitSeconds;
+        if (!isTutorialFinish)
+        {
+            yield return waitFrame;
+            Time.timeScale = 0f;
+            ShowNextStep();
+        }
+        else
+        {
+            cameraCon.StartingMoveCamera();
+            Destroy(this);
+        }
     }
 
     private void Update()
@@ -134,6 +157,8 @@ public class NewTutorialGuide : MonoBehaviour
 
     private void EndTutorial()
     {
+        isTutorialFinish = true;
+        SaveManager.Instance.SaveGame(); // 튜토리얼 끝난 후 강제 저장
         isWaitingForAction = false;
         uiManager.HideTutorial();
         animationManager.HideAllGuides();

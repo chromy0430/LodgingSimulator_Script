@@ -88,6 +88,14 @@ namespace JY
         /// </summary>
         public void AddPayment(string aiName, int amount, string roomID, int roomReputation)
         {
+            // 중복 등록 방지: 같은 AI가 같은 방에 대한 미결제 항목이 이미 있으면 추가하지 않음
+            bool isDuplicate = paymentQueue.Exists(p => p.aiName == aiName && p.roomID == roomID && !p.isPaid);
+            if (isDuplicate)
+            {
+                Debug.Log($"[PaymentSystem] 중복 결제 등록 방지: {aiName}, 방 {roomID} (이미 미결제 항목 존재)");
+                return;
+            }
+            
             paymentQueue.Add(new PaymentInfo(aiName, amount, roomID, roomReputation));
             DebugLog($"새로운 결제 등록: {aiName}, 방 {roomID}, {amount}원, 명성도 {roomReputation}", showPaymentLogs);
         }
@@ -102,7 +110,15 @@ namespace JY
             int totalAmount = 0;
             List<PaymentInfo> aiPayments = paymentQueue.FindAll(p => p.aiName == aiName && !p.isPaid);
             
-            DebugLog($"{aiName}의 미결제 항목 {aiPayments.Count}개 발견", showPaymentLogs);
+            if (aiPayments.Count == 0)
+            {
+                int alreadyPaidCount = paymentQueue.FindAll(p => p.aiName == aiName && p.isPaid).Count;
+                Debug.LogWarning($"[PaymentSystem] AI {aiName}의 미결제 항목이 0개입니다. 전체 큐: {paymentQueue.Count}개 (이미 결제됨: {alreadyPaidCount}개)");
+            }
+            else
+            {
+                DebugLog($"{aiName}의 미결제 항목 {aiPayments.Count}개 발견", showPaymentLogs);
+            }
             
             foreach (var payment in aiPayments)
             {
@@ -117,7 +133,10 @@ namespace JY
                 var playerWallet = PlayerWallet.Instance;
                 if (playerWallet != null)
                 {
+                    int beforeMoney = playerWallet.money;
                     playerWallet.AddMoney(totalAmount);
+                    int afterMoney = playerWallet.money;
+                    Debug.Log($"💰 [돈 획득] AI: {aiName}, 획득 금액: {totalAmount}원 (이전: {beforeMoney}원 → 현재: {afterMoney}원)");
                     DebugLog($"플레이어 소지금에 {totalAmount}원 추가", true);
                 }
                 else
@@ -129,12 +148,15 @@ namespace JY
                 if (reputationSystem != null)
                 {
                     DebugLog($"명성도 시스템 발견, 명성도 증가 시작", showPaymentLogs);
+                    int totalReputation = 0;
                     foreach (var payment in aiPayments)
                     {
+                        totalReputation += payment.roomReputation;
                         DebugLog($"명성도 증가 호출 - AI: {payment.aiName}, 방: {payment.roomID}, 명성도: {payment.roomReputation}", showPaymentLogs);
                         // 방 명성도 기반으로 명성도 지급
                         reputationSystem.AddReputation(payment.roomReputation, $"방 {payment.roomID} 사용 완료");
                     }
+                    Debug.Log($"⭐ [명성도 획득] AI: {aiName}, 획득 명성도: {totalReputation} (총 {aiPayments.Count}개 방)");
                 }
                 else
                 {
@@ -190,8 +212,6 @@ namespace JY
             if (!showDebugLogs) return;
             
             if (showImportantLogsOnly && !isImportant) return;
-            
-            Debug.Log($"[PaymentSystem] {message}");
         }
         
         #endregion

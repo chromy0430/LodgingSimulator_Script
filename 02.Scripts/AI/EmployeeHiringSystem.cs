@@ -79,7 +79,6 @@ namespace JY
             playerWallet = PlayerWallet.Instance;
             if (playerWallet == null)
             {
-                Debug.LogError("[EmployeeHiringSystem] PlayerWallet을 찾을 수 없습니다!");
                 return;
             }
             
@@ -317,7 +316,6 @@ namespace JY
             }
             catch (Exception e)
             {
-                Debug.LogError($"[EmployeeHiringSystem] 직원 생성 중 오류 발생: {e.Message}");
                 return null;
             }
         }
@@ -338,7 +336,6 @@ namespace JY
         {
             if (enableDebugLogs)
             {
-                Debug.Log($"[EmployeeHiringSystem] {message}");
             }
         }
         
@@ -377,7 +374,6 @@ namespace JY
         {
             if (Application.isPlaying)
             {
-                Debug.Log($"[고용 상태] {GetHiringStatusInfo()}");
             }
         }
         

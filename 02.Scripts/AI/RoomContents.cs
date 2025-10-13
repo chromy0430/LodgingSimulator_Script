@@ -226,8 +226,6 @@ namespace JY
             if (!showDebugLogs) return;
             
             if (showImportantLogsOnly && !isImportant) return;
-            
-            Debug.Log($"[RoomContents-{roomID}] {message}");
         }
         
         #endregion

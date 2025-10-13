@@ -78,7 +78,6 @@ namespace JY.AI
             // EmployeeHiringSystem에서 고용된 직원들 가져오기
             if (EmployeeHiringSystem.Instance == null)
             {
-                Debug.LogWarning("[AIPayrollManager] EmployeeHiringSystem not found!");
                 return;
             }
             
@@ -96,7 +95,6 @@ namespace JY.AI
                     
                     if (enablePayrollLogs)
                     {
-                        Debug.Log($"[AIPayrollManager] 급여 지급: {employee.employeeName} - {dailyWage}골드");
                     }
                 }
             }
@@ -108,7 +106,6 @@ namespace JY.AI
                 
                 if (enablePayrollLogs)
                 {
-                    Debug.Log($"[AIPayrollManager] 총 급여 지급 완료: {paidAICount}명, {totalPayroll}골드");
                 }
             }
             
@@ -126,17 +123,14 @@ namespace JY.AI
                 if (PlayerWallet.Instance.money >= totalAmount)
                 {
                     PlayerWallet.Instance.SpendMoney(totalAmount);
-                    Debug.Log($"[AIPayrollManager] 급여 차감 완료: {totalAmount}골드. 남은 골드: {PlayerWallet.Instance.money}");
                 }
                 else
                 {
-                    Debug.LogWarning($"[AIPayrollManager] 급여 지급 실패: 골드 부족 ({totalAmount}골드 필요, 현재: {PlayerWallet.Instance.money}골드)");
                     // TODO: 급여를 지급할 수 없는 경우의 처리 (AI 해고, 경고 등)
                 }
             }
             else
             {
-                Debug.LogError("[AIPayrollManager] PlayerWallet 인스턴스를 찾을 수 없습니다!");
             }
         }
         

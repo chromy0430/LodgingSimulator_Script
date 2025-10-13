@@ -1,7 +1,9 @@
+using DG.Tweening;
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using DG.Tweening;
+using UnityEngine.Localization.Settings;
 using UnityEngine.UI;
 
 public class InputManager : MonoBehaviour
@@ -20,6 +22,16 @@ public class InputManager : MonoBehaviour
     private Vector3 uiHidePosition; // BuildUI가 숨겨진 위치
     private Tween   uiTween; // 현재 실행 중인 트윈 저장
 
+
+    private Vector3 uiShowPosition2; // buildModeUI가 보이는 위치
+    private Vector3 uiHidePosition2; // buildModeUI가 숨겨진 위치
+
+    [Header("UI 참조")]
+    [Tooltip("건축/삭제 모드 토글 UI")]
+    [SerializeField] private BuildModeToggle buildModeToggle;
+
+    public GameObject buildModeUI;
+
     [Header("변수")]
     
     [SerializeField] private LayerMask placementLayermask;
@@ -31,10 +43,14 @@ public class InputManager : MonoBehaviour
     public GameObject SettingUI;
     public GameObject SettingUI2;
     public GameObject targetObject;
-    public GameObject QuestUI;
-    public Button     SettingBtn;
-
+    public GameObject QuestUI;    
     public GameObject HiringUI;
+    public Button SettingBtn;
+
+    [Header("언어별 설정 이미지")]
+    public GameObject settingImageKO; // 한국어 이미지
+    public GameObject settingImageEN; // 영어 이미지
+
 
     public RaycastHit   hit;
     public RaycastHit   hit2; 
@@ -50,31 +66,30 @@ public class InputManager : MonoBehaviour
     private void Start()
     {
         InitialBuildUI();
-
         SettingBtn.onClick.AddListener(OnOffSettingUI);
+        LocalizationSettings.SelectedLocaleChanged += OnLocaleChanged;
     }
-    
+    private void OnDestroy()
+    {
+        LocalizationSettings.SelectedLocaleChanged -= OnLocaleChanged;
+    }
+
+    private void OnLocaleChanged(UnityEngine.Localization.Locale newLocale)
+    {
+        // 설정 UI가 활성화 상태일 때만 이미지를 업데이트합니다.
+        if (SettingUI.activeSelf)
+        {
+            UpdateSettingImages();
+        }
+    }
+
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Alpha1))
-        {
-            Time.timeScale = 0.1f;
-        }
-
-        if (Input.GetKeyDown(KeyCode.Alpha2))
-        {
-            Time.timeScale = 0.3f;
-        }
-
-        if (Input.GetKeyDown(KeyCode.Alpha3))
-        {
-            Time.timeScale = 0.5f;
-        }
-
         // B키로 건설모드 시작
-        if (Input.GetKeyDown(KeyCode.B) && !IsPointerOverUI())
+        if (Input.GetKeyDown(KeyCode.B)/* && !IsPointerOverUI()*/)
         {
             ChangeBuildMode();
+            
         }
 
         // Q키로 퀘스트 UI 출력
@@ -104,8 +119,10 @@ public class InputManager : MonoBehaviour
             if (isBuildMode)
             {
                 isBuildMode = false;
-                placementSystem.ExitBuildMode();
-                HideBuildUI();
+
+                //placementSystem.ExitBuildMode();
+
+                StartCoroutine(HideBuildUI());
             }
             OnExit?.Invoke();
         }
@@ -113,7 +130,17 @@ public class InputManager : MonoBehaviour
         // 삭제모드 시작
         if (Input.GetKeyDown(KeyCode.L) && isBuildMode)
         {
-            ChangeDeleteMode();
+            if (buildModeToggle != null)
+            {
+                // BuildModeToggle UI에 토글 명령
+                buildModeToggle.ToggleMode();
+            }
+            else
+            {
+                Debug.LogWarning("BuildModeToggle이 InputManager에 연결되지 않았습니다!");
+            }
+
+            //ChangeDeleteMode();
         }
 
         // 일반 모드에서 오브젝트 클릭 처리
@@ -128,17 +155,6 @@ public class InputManager : MonoBehaviour
         }
     }
 
-    private void ChangeDeleteMode()
-    {
-        if (isDeleteMode)
-            placementSystem.StopDeleteMode();
-        else
-        {
-            placementSystem.StartDeleteMode();            
-        }
-        
-    }
-
     private void ChangeBuildMode()
     {
         isBuildMode = !isBuildMode;
@@ -148,8 +164,9 @@ public class InputManager : MonoBehaviour
         }
         else
         {
-            HideBuildUI(); // BuildUI 애니메이션 실행
-            placementSystem.ExitBuildMode();
+            StartCoroutine(HideBuildUI());
+            //HideBuildUI(); // BuildUI 애니메이션 실행
+            //placementSystem.ExitBuildMode();
             OnExit?.Invoke();
         }
 
@@ -171,6 +188,8 @@ public class InputManager : MonoBehaviour
             SettingUI.SetActive(true);
             SettingUI.transform.localScale = Vector3.one * 0.1f;
             SettingUI.transform.DOScale(1f, animationDuration).SetEase(openEase).SetUpdate(true);
+
+            UpdateSettingImages();
         }
         // UI가 활성화 상태일 때 -> 닫기
         else
@@ -189,13 +208,25 @@ public class InputManager : MonoBehaviour
         //if(SettingUI2.activeSelf) SettingUI2.SetActive(false);
     }
 
-    private void HandleObjectSelection()
+    private void UpdateSettingImages()
     {
-        /*if (interactionUI is not null && interactionUI.IsUIActive())
+        if (settingImageKO == null || settingImageEN == null) return;
+
+        // 현재 선택된 언어의 코드를 확인합니다.
+        if (LocalizationSettings.SelectedLocale.Identifier.Code == "ko-KR")
         {
-            return; // UI가 열려 있으면 다른 오브젝트 선택 무시
-        }*/
-        
+            settingImageKO.SetActive(true);
+            settingImageEN.SetActive(false);
+        }
+        else // 한국어가 아니면 영어 이미지를 보여줍니다.
+        {
+            settingImageKO.SetActive(false);
+            settingImageEN.SetActive(true);
+        }
+    }
+
+    private void HandleObjectSelection()
+    {        
         GameObject clickedObject = GetClickedObject();
         
         if (clickedObject != null)
@@ -241,8 +272,11 @@ public class InputManager : MonoBehaviour
     private void InitialBuildUI()
     {
         // BuildUI의 초기 위치 설정
-        if (BuildUI is not null)
+        if (BuildUI is not null && buildModeUI is not null)
         {
+            BuildUI.SetActive(true);
+            buildModeUI.SetActive(true);
+
             // BuildUI의 RectTransform 사용
             RectTransform uiRect = BuildUI.GetComponent<RectTransform>();
             if (uiRect is not null)
@@ -261,34 +295,34 @@ public class InputManager : MonoBehaviour
             {
                 Debug.LogError("BuildUI에 RectTransform이 없습니다!");
             }
+
+            RectTransform uiRect2 = buildModeUI.GetComponent<RectTransform>();
+            if (uiRect2 is not null)
+            {
+                // 현재 위치를 보이는 위치로 설정
+                uiShowPosition2 = uiRect2.anchoredPosition;
+
+                // 숨겨진 위치는 Y축을 아래로 이동 (화면 아래로)
+                uiHidePosition2 = uiShowPosition2 + new Vector3(0, -Screen.height, 0); // 화면 높이만큼 아래로
+
+                // 초기 상태: BuildUI 숨김
+                uiRect2.anchoredPosition = uiHidePosition2;
+                buildModeUI.SetActive(false); // 비활성화 대신 위치로 제어
+            }
+            else
+            {
+                Debug.LogError("buildModeUI에 RectTransform이 없습니다!");
+            }
+
+            BuildUI.SetActive(false);
+            buildModeUI.SetActive(false);
         }
         else
         {
-            Debug.LogError("BuildUI가 할당되지 않았습니다!");
+            Debug.LogError("BuildUI 또는 buildModeUI 가 할당되지 않았습니다!");
         }
 
         if(SettingUI is not null) SettingUI.SetActive(false);
-    }
-
-    private void ActiveInputHelper()
-    {
-        if (targetObject == null)
-        {
-            Debug.LogError("Target Object가 할당되지 않았습니다!");
-            return;
-        }
-
-        if (Input.GetKey(KeyCode.F1))
-        {
-            // 타겟 게임 오브젝트를 활성화시킵니다.
-            targetObject.SetActive(true);
-        }
-        // F1 키에서 손을 떼는 순간 true를 반환합니다.
-        else if (Input.GetKeyUp(KeyCode.F1))
-        {
-            // 타겟 게임 오브젝트를 비활성화시킵니다.
-            targetObject.SetActive(false);
-        }
     }
 
     /// <summary>
@@ -297,6 +331,7 @@ public class InputManager : MonoBehaviour
     private void ShowBuildUI()
     {
         if (BuildUI is null) return;
+        if (buildModeUI is null) return;
 
         // 기존 트윈이 있으면 종료
         if (uiTween is not null)
@@ -314,33 +349,68 @@ public class InputManager : MonoBehaviour
                 .SetUpdate(UpdateType.Normal, true) // 타임스케일 영향 X
                 .OnComplete(() => uiTween = null); // 완료 시 트윈 변수 초기화
         }
+
+        RectTransform uiRect2 = buildModeUI.GetComponent<RectTransform>();
+        if (uiRect2 is not null)
+        {
+            // DOTween으로 Y축 이동 애니메이션
+            uiTween = uiRect2.DOAnchorPosY(uiShowPosition2.y, 0.5f) // 0.5초 동안 이동
+                .SetEase(Ease.OutQuad) // 부드러운 이징
+                .SetUpdate(UpdateType.Normal, true) // 타임스케일 영향 X
+                .OnComplete(() => uiTween = null); // 완료 시 트윈 변수 초기화
+        }
     }
 
     /// <summary>
     /// BuildUI를 아래로 내리는 Dotween 애니메이션 코드
     /// </summary>
-    private void HideBuildUI()
+    private IEnumerator HideBuildUI()
     {
-        if (BuildUI is null) return;
+        if (BuildUI == null || buildModeUI == null) yield break;
 
-        // 기존 트윈이 있으면 종료
-        if (uiTween is not null)
+
+        // buildModeToggle이 있다면 '건축' 모드로 리셋
+        if (buildModeToggle != null)
         {
-            uiTween.Kill();
+            buildModeToggle.ResetToBuildMode();
         }
 
+        bool buildUI_AnimationFinished = false;
+        bool buildModeUI_AnimationFinished = false;
+
         RectTransform uiRect = BuildUI.GetComponent<RectTransform>();
-        if (uiRect is not null)
+        if (uiRect != null)
         {
-            // DOTween으로 Y축 이동 애니메이션
-            uiTween = uiRect.DOAnchorPosY(uiHidePosition.y, 0.5f) // 0.5초 동안 이동
-                .SetEase(Ease.InQuad) // 부드러운 이징
-                .SetUpdate(UpdateType.Normal, true) // 타임스케일 영향 X
-                .OnComplete(() =>
-                {
-                    uiTween = null;
-                    //placementSystem.ExitBuildMode();
-                }); // 완료 시 트윈 변수 초기화
+            uiRect.DOAnchorPosY(uiHidePosition.y, 0.5f)
+                .SetEase(Ease.InQuad)
+                .SetUpdate(true)
+                .OnComplete(() => {
+                    BuildUI.SetActive(false); // 애니메이션 끝나면 비활성화
+                    buildUI_AnimationFinished = true;
+                });
+        }
+        else { buildUI_AnimationFinished = true; }
+
+        RectTransform uiRect2 = buildModeUI.GetComponent<RectTransform>();
+        if (uiRect2 != null)
+        {
+            uiRect2.DOAnchorPosY(uiHidePosition2.y, 0.5f)
+                .SetEase(Ease.InQuad)
+                .SetUpdate(true)
+                .OnComplete(() => {
+                    buildModeUI.SetActive(false); // 애니메이션 끝나면 비활성화
+                    buildModeUI_AnimationFinished = true;
+                });
+        }
+        else { buildModeUI_AnimationFinished = true; }
+
+        // 애니메이션이 완료될 때까지 대기
+        yield return new WaitUntil(() => buildUI_AnimationFinished && buildModeUI_AnimationFinished);
+
+        // 4. 모든 애니메이션이 끝난 후 건설 모드 종료
+        if (placementSystem != null)
+        {
+            placementSystem.ExitBuildMode();
         }
     }
 

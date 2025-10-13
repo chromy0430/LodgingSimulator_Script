@@ -565,8 +565,6 @@ namespace JY
         private void DebugLog(string message, bool isImportant = false)
         {
             if (!enableDebugLogs) return;
-            
-            Debug.Log($"[WorkPositionManager] {message}");
         }
         
         void OnDrawGizmos()

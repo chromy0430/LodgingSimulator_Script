@@ -21,6 +21,7 @@ public class SaveData // 저장할 데이터
     public int currentDay;
     public int currentPurchaseLevel;
     public bool floorLock;
+    public bool isTutorialFinished;
 
     // 퀘스트 데이터
     public List<QuestSaveData> activeQuests;
@@ -110,7 +111,8 @@ public class SaveManager : MonoBehaviour
             activeQuests = activeQuestsToSave,
             pendingQuestNames = QuestManager.Instance.pendingQuests.AsValueEnumerable().Select(q => q.questName).ToList(),
             availableQuestNames = QuestManager.Instance.availableQuests.AsValueEnumerable().Select(q => q.questName).ToList(),
-            currentQuestName = (QuestManager.Instance.CurrentQuest != null) ? QuestManager.Instance.CurrentQuest.questName : null
+            currentQuestName = (QuestManager.Instance.CurrentQuest != null) ? QuestManager.Instance.CurrentQuest.questName : null,
+            isTutorialFinished = NewTutorialGuide.Instance.isTutorialFinish
         };
 
         try
@@ -274,6 +276,8 @@ public class SaveManager : MonoBehaviour
             PlacementSystem.Instance.ActivatePlanesByLevel(loadedSaveData.currentPurchaseLevel);
             PlacementSystem.Instance.UpdateGridBounds();
             PlacementSystem.Instance.HideAllPlanes();
+
+            NewTutorialGuide.Instance.isTutorialFinish = loadedSaveData.isTutorialFinished;
 
             Debug.Log("게임 데이터 복원 완료");
         }

@@ -15,7 +15,6 @@ namespace JY
         {
             if (database == null)
             {
-                Debug.LogError($"ObjectsDatabase not assigned to {gameObject.name}");
             }
         }
     }

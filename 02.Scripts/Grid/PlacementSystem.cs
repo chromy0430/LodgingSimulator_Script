@@ -67,6 +67,9 @@ public class PlacementSystem : MonoBehaviour
     private bool navMeshNeedsRebuild = false;
     private float navMeshRebuildTimer = 0f;
 
+    [Header("툴팁 관련")]
+    [SerializeField] private GameObject tooltipPanel;
+
     /// <summary>
     /// 싱글톤 패턴 사용
     /// </summary>
@@ -1061,6 +1064,7 @@ public class PlacementSystem : MonoBehaviour
     {
         inputManager.isBuildMode = true;
         inputManager.BuildUI.SetActive(true);
+        inputManager.buildModeUI.SetActive(true);
 
         foreach (GameObject gridVisual in gridVisualization)
         {
@@ -1076,8 +1080,16 @@ public class PlacementSystem : MonoBehaviour
     public void ExitBuildMode()
     {
         inputManager.isBuildMode = false;
+
         StopPlacement();
+
         inputManager.BuildUI.SetActive(false);
+        inputManager.buildModeUI.SetActive(false);
+
+        if (tooltipPanel.activeSelf)
+        {
+            tooltipPanel.SetActive(false);
+        }
 
         foreach (GameObject gridVisual in gridVisualization)
         {

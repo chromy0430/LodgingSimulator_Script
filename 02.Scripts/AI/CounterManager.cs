@@ -59,42 +59,38 @@ public class CounterManager : MonoBehaviour
     // 대기열에 합류 요청 (방 배정/방 사용완료 보고 모두 동일 대기열 사용)
     public bool TryJoinQueue(AIAgent agent)
     {
-        Debug.Log($"[CounterManager] 대기열 진입 요청 - AI: {agent.gameObject.name}, 현재 대기 인원: {waitingQueue.Count}/{maxQueueLength}");
-        
         // 직원이 필요한데 배정된 직원이 없으면 대기열 진입 거부
         if (requiresEmployee && !isCounterActive)
         {
-            Debug.Log($"[CounterManager] 카운터에 직원이 없어서 서비스를 제공할 수 없습니다. AI: {agent.gameObject.name}");
+            Debug.Log($"[CounterManager] AI {agent.name}: 대기열 진입 실패 - 카운터 비활성화 (직원 없음)");
             return false;
         }
         
         if (waitingQueue.Count >= maxQueueLength)
         {
-            Debug.Log($"[CounterManager] 대기열이 가득 찼습니다. (현재 {waitingQueue.Count}명, 최대 {maxQueueLength}명)");
+            Debug.Log($"[CounterManager] AI {agent.name}: 대기열 진입 실패 - 대기열 가득참 ({waitingQueue.Count}/{maxQueueLength})");
             return false;
         }
 
         waitingQueue.Enqueue(agent);
+        Debug.Log($"[CounterManager] AI {agent.name}: 대기열 진입 성공 - 현재 대기열 수: {waitingQueue.Count}, 위치: {waitingQueue.Count}번째");
         UpdateQueuePositions();
-        Debug.Log($"[CounterManager] AI {agent.gameObject.name}이(가) 대기열에 합류했습니다. (대기 인원: {waitingQueue.Count}명)");
         return true;
     }
 
     // AI가 대기열에서 나가기 요청
     public void LeaveQueue(AIAgent agent)
     {
-        Debug.Log($"[CounterManager] 대기열 나가기 요청 - AI: {agent.gameObject.name}");
-        
         if (currentServingAgent == agent)
         {
-            Debug.Log($"[CounterManager] 현재 서비스 중인 AI {agent.gameObject.name} 서비스 중단");
+            Debug.Log($"[CounterManager] AI {agent.name}: 서비스 중인 AI가 대기열에서 나감");
             currentServingAgent = null;
             isProcessingService = false;
         }
 
         RemoveFromQueue(waitingQueue, agent);
+        Debug.Log($"[CounterManager] AI {agent.name}: 대기열에서 나감 - 남은 대기열 수: {waitingQueue.Count}");
         UpdateQueuePositions();
-        Debug.Log($"[CounterManager] AI {agent.gameObject.name}이(가) 대기열에서 나갔습니다. (남은 인원: {waitingQueue.Count}명)");
     }
 
     private void RemoveFromQueue(Queue<AIAgent> queue, AIAgent agent)
@@ -113,7 +109,6 @@ public class CounterManager : MonoBehaviour
             else
             {
                 removed = true;
-                Debug.Log($"[CounterManager] 대기열에서 AI {agent.gameObject.name} 제거됨");
             }
         }
         while (tempQueue.Count > 0)
@@ -123,7 +118,6 @@ public class CounterManager : MonoBehaviour
         
         if (!removed)
         {
-            Debug.LogWarning($"[CounterManager] AI {agent.gameObject.name}이(가) 대기열에 없어서 제거할 수 없습니다.");
         }
     }
 
@@ -131,19 +125,22 @@ public class CounterManager : MonoBehaviour
     private void UpdateQueuePositions()
     {
         int index = 0;
+        // 카운터를 바라보는 방향 계산 (카운터의 반대 방향)
+        Quaternion faceCounterRotation = Quaternion.LookRotation(-counterTransform.forward);
+        
         foreach (var agent in waitingQueue)
         {
             if (agent != null)
             {
                 if (agent == currentServingAgent)
                 {
-                    agent.SetQueueDestination(counterFront);
+                    agent.SetQueueDestination(counterFront, faceCounterRotation);
                 }
                 else
                 {
                     float distance = counterServiceDistance + (index * queueSpacing);
                     Vector3 queuePosition = transform.position + counterTransform.forward * distance;
-                    agent.SetQueueDestination(queuePosition);
+                    agent.SetQueueDestination(queuePosition, faceCounterRotation);
                 }
                 index++;
             }
@@ -154,37 +151,37 @@ public class CounterManager : MonoBehaviour
     public bool CanReceiveService(AIAgent agent)
     {
         bool canReceive = waitingQueue.Count > 0 && waitingQueue.Peek() == agent && !isProcessingService;
-        Debug.Log($"[CounterManager] 서비스 가능 확인 - AI: {agent.gameObject.name}, 결과: {canReceive}, 대기열 첫번째: {(waitingQueue.Count > 0 ? waitingQueue.Peek().gameObject.name : "없음")}, 처리 중: {isProcessingService}");
+        
+        if (canReceive)
+        {
+            Debug.Log($"[CounterManager] AI {agent.name}: 서비스 받을 수 있음 (대기열 첫 번째, 서비스 처리 중 아님)");
+        }
+        
         return canReceive;
     }
 
     // 서비스 시작
     public void StartService(AIAgent agent)
     {
-        Debug.Log($"[CounterManager] StartService 호출 - AI: {agent.gameObject.name}");
-        
         if (CanReceiveService(agent))
         {
             currentServingAgent = agent;
             isProcessingService = true;
             agent.SetQueueDestination(counterFront);
+            Debug.Log($"[CounterManager] AI {agent.name}: 서비스 시작 (처리 시간: {serviceTime}초)");
             UpdateQueuePositions();
             StartCoroutine(ServiceCoroutine(agent));
-            Debug.Log($"[CounterManager] AI {agent.gameObject.name} 서비스가 시작되었습니다.");
         }
         else
         {
-            Debug.LogWarning($"[CounterManager] AI {agent.gameObject.name}은(는) 서비스를 받을 수 없습니다.");
+            Debug.LogWarning($"[CounterManager] AI {agent.name}: 서비스 시작 실패 - CanReceiveService가 false");
         }
     }
 
     // 서비스 처리 코루틴
     private IEnumerator ServiceCoroutine(AIAgent agent)
     {
-        Debug.Log($"[CounterManager] 서비스 시작 - AI: {agent.gameObject.name}, 서비스 시간: {serviceTime}초");
         yield return new WaitForSeconds(serviceTime);
-        
-        Debug.Log($"[CounterManager] 서비스 시간 완료 - AI: {agent.gameObject.name}");
         
         if (currentServingAgent == agent)
         {
@@ -192,22 +189,22 @@ public class CounterManager : MonoBehaviour
             if (waitingQueue.Count > 0 && waitingQueue.Peek() == agent)
             {
                 waitingQueue.Dequeue();
-                Debug.Log($"[CounterManager] 서비스 완료로 AI {agent.gameObject.name}을(를) 대기열에서 제거");
+                Debug.Log($"[CounterManager] AI {agent.name}: 서비스 완료 - 대기열에서 제거됨, 남은 대기열: {waitingQueue.Count}");
             }
             else
             {
-                Debug.LogWarning($"[CounterManager] 서비스 완료했지만 AI {agent.gameObject.name}이(가) 대기열 첫 번째가 아님");
+                Debug.LogWarning($"[CounterManager] AI {agent.name}: 서비스 완료했지만 대기열 첫 번째가 아님 (대기열 수: {waitingQueue.Count})");
             }
 
             currentServingAgent = null;
             isProcessingService = false;
             UpdateQueuePositions();
+            Debug.Log($"[CounterManager] AI {agent.name}: OnServiceComplete() 호출");
             agent.OnServiceComplete();
-            Debug.Log($"[CounterManager] AI {agent.gameObject.name} 서비스가 완료되었습니다. (남은 대기 인원: {waitingQueue.Count}명)");
         }
         else
         {
-            Debug.LogWarning($"[CounterManager] 서비스 완료 시 currentServingAgent가 다른 AI입니다. 현재: {currentServingAgent?.gameObject.name}, 완료된 AI: {agent.gameObject.name}");
+            Debug.LogWarning($"[CounterManager] 서비스 완료 시 currentServingAgent가 {agent.name}이 아님");
         }
     }
 
@@ -222,8 +219,6 @@ public class CounterManager : MonoBehaviour
     /// </summary>
     public void ForceCleanupQueue()
     {
-        Debug.Log($"[CounterManager] 강제 대기열 정리 시작 - 정리 전: {waitingQueue.Count}명");
-        
         int originalCount = waitingQueue.Count;
         var cleanQueue = new Queue<AIAgent>();
         
@@ -242,17 +237,14 @@ public class CounterManager : MonoBehaviour
                     }
                     else
                     {
-                        Debug.Log($"[CounterManager] 비활성화된 AI {agent.gameObject.name} 대기열에서 제거");
                     }
                 }
                 catch
                 {
-                    Debug.Log($"[CounterManager] 파괴된 AI 참조 대기열에서 제거");
                 }
             }
             else
             {
-                Debug.Log($"[CounterManager] null AI 참조 대기열에서 제거");
             }
         }
         
@@ -265,21 +257,18 @@ public class CounterManager : MonoBehaviour
             {
                 if (currentServingAgent.gameObject == null || !currentServingAgent.gameObject.activeInHierarchy)
                 {
-                    Debug.Log($"[CounterManager] 서비스 중인 AI가 비활성화됨, 서비스 중단");
                     currentServingAgent = null;
                     isProcessingService = false;
                 }
             }
             catch
             {
-                Debug.Log($"[CounterManager] 서비스 중인 AI 참조가 파괴됨, 서비스 중단");
                 currentServingAgent = null;
                 isProcessingService = false;
             }
         }
         
         UpdateQueuePositions();
-        Debug.Log($"[CounterManager] 강제 대기열 정리 완료 - 정리 후: {waitingQueue.Count}명 (제거됨: {originalCount - waitingQueue.Count}명)");
     }
 
     void OnDrawGizmos()
@@ -340,7 +329,6 @@ public class CounterManager : MonoBehaviour
         {
             assignedEmployee = employee;
             UpdateCounterStatus();
-            Debug.Log($"[CounterManager] 직원 {employee.employeeName}이(가) 이 카운터에 배정되었습니다.");
         }
     }
 
@@ -356,8 +344,6 @@ public class CounterManager : MonoBehaviour
             
             // 대기 중인 AI들을 모두 제거
             ClearAllQueues();
-            
-            Debug.Log($"[CounterManager] 직원 {employee.employeeName}이(가) 해고되어 카운터가 비활성화되었습니다.");
         }
     }
 
@@ -396,11 +382,9 @@ public class CounterManager : MonoBehaviour
         {
             if (isCounterActive)
             {
-                Debug.Log($"[CounterManager] 카운터가 활성화되었습니다. 직원: {(assignedEmployee != null ? assignedEmployee.employeeName : "없음")}");
             }
             else
             {
-                Debug.Log($"[CounterManager] 카운터가 비활성화되었습니다. ({noEmployeeMessage})");
             }
         }
     }
@@ -428,7 +412,6 @@ public class CounterManager : MonoBehaviour
         }
         
         isProcessingService = false;
-        Debug.Log($"[CounterManager] 직원 부재로 인해 모든 대기열이 정리되었습니다.");
     }
 
     /// <summary>
@@ -450,7 +433,6 @@ public class CounterManager : MonoBehaviour
         {
             assignedEmployee = employee;
             UpdateCounterStatus();
-            Debug.Log($"[CounterManager] 직원 {employee.employeeName}이(가) 수동으로 배정되었습니다.");
         }
     }
 
@@ -461,7 +443,6 @@ public class CounterManager : MonoBehaviour
     {
         if (assignedEmployee != null)
         {
-            Debug.Log($"[CounterManager] 직원 {assignedEmployee.employeeName} 배정이 해제되었습니다.");
             assignedEmployee = null;
             UpdateCounterStatus();
             ClearAllQueues();

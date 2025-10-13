@@ -59,25 +59,21 @@ namespace JY.AI
         {
             if (string.IsNullOrEmpty(aiName))
             {
-                Debug.LogError($"AI 데이터 '{name}'의 이름이 비어있습니다.");
                 return false;
             }
             
             if (aiPrefab == null)
             {
-                Debug.LogError($"AI 데이터 '{aiName}'의 프리팹이 설정되지 않았습니다.");
                 return false;
             }
             
             if (!stats.IsValid())
             {
-                Debug.LogError($"AI 데이터 '{aiName}'의 능력치가 유효하지 않습니다.");
                 return false;
             }
             
             if (availableTasks.Count == 0)
             {
-                Debug.LogWarning($"AI 데이터 '{aiName}'에 수행 가능한 작업이 없습니다.");
             }
             
             return true;

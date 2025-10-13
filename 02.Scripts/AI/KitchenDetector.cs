@@ -35,12 +35,12 @@ namespace JY
         
         [Header("스캔 설정")]
         [Tooltip("주방 요소들을 그룹핑할 최대 거리")]
-        [Range(1f, 20f)]
-        [SerializeField] private float maxGroupingDistance = 8f;
+        [Range(1f, 30f)]
+        [SerializeField] private float maxGroupingDistance = 15f;
         
         [Tooltip("주방 인식 범위 확장 (의자 등 주변 요소 포함용)")]
-        [Range(0.5f, 5f)]
-        [SerializeField] private float kitchenBoundsExpansion = 2f;
+        [Range(0.5f, 10f)]
+        [SerializeField] private float kitchenBoundsExpansion = 5f;
         
         [Tooltip("자동 주기적 스캔 활성화")]
         [SerializeField] private bool enablePeriodicScan = true;
@@ -679,8 +679,6 @@ namespace JY
         {
             if (!showDebugLogs) return;
             if (showImportantLogsOnly && !isImportant) return;
-            
-            Debug.Log($"[KitchenDetector] {message}");
         }
         
         /// <summary>
@@ -749,11 +747,9 @@ namespace JY
         [ContextMenu("주방 정보 출력")]
         private void EditorPrintKitchenInfo()
         {
-            Debug.Log($"=== 감지된 주방 정보 ({detectedKitchens.Count}개) ===");
             for (int i = 0; i < detectedKitchens.Count; i++)
             {
                 var kitchen = detectedKitchens[i];
-                Debug.Log($"{i + 1}. {kitchen.kitchenName} ({kitchen.floorLevel}층) - 카운터:{kitchen.counterCount}, 인덕션:{kitchen.inductionCount}, 테이블:{kitchen.tableCount}");
             }
         }
         

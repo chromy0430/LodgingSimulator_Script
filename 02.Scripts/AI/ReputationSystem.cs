@@ -123,7 +123,6 @@ namespace JY
 
             if (FloatingTextManager.Instance != null && reputationTextTransform != null && amount > 0)
             {
-                Debug.Log("***************************명성도 추가***************************");
                 FloatingTextManager.Instance.Show($"+{amount}", floatingTextColor, reputationTextTransform.position);
             }
 
@@ -296,8 +295,6 @@ namespace JY
             if (!showDebugLogs) return;
             
             if (showImportantLogsOnly && !isImportant) return;
-            
-            Debug.Log($"[ReputationSystem] {message}");
         }
         
         #endregion

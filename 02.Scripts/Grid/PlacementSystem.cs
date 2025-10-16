@@ -1,7 +1,6 @@
 using JY;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Serialization;
 using UnityEngine.UI;
 using ZLinq;
 
@@ -9,11 +8,16 @@ public class PlacementSystem : MonoBehaviour
 {
     public static PlacementSystem Instance { get; set; }
 
+    // 25-10-16 영상찍기용 변수
+    public bool isVideoTaking = false;
+    //
+
     [Header("컴포넌트")]
     [SerializeField] private InputManager inputManager;
-    [SerializeField] private ObjectPlacer objectPlacer;
-    [SerializeField] private GameObject previewObject;
+    [SerializeField] private ObjectPlacer objectPlacer;    
     [SerializeField] private ChangeFloorSystem changeFloorSystem;
+    [SerializeField] private PurchaseButton purchaseButtonSystem;
+    [SerializeField] private BuildModeToggle buildModeToggle;
     private GridData selectedData; 
     
     private Renderer previewRenderer;
@@ -28,11 +32,13 @@ public class PlacementSystem : MonoBehaviour
     public int indicatorMax = 100;
     [SerializeField] public GameObject mouseIndicator;
     [SerializeField] public GameObject cellIndicatorPrefab;
+    [SerializeField] private GameObject previewObject;
     private List<GameObject> cellIndicators = new List<GameObject>();
     private int selectedObjectIndex = -1;
     public int currentPurchaseLevel = 1;
     public bool FloorLock = false;
-    
+       
+
     // 가구 레이어 마스크 설정
     private int furnitureLayerMask;
     
@@ -417,6 +423,7 @@ public class PlacementSystem : MonoBehaviour
     {
         StopPlacement();
         StopDeleteMode();
+        buildModeToggle.ResetToBuildMode();
 
         selectedObjectIndex = database.objectsData.FindIndex(data => data.ID == ID);
         if (selectedObjectIndex < 0)
@@ -443,12 +450,21 @@ public class PlacementSystem : MonoBehaviour
         }
 
         previewObject = Instantiate(database.objectsData[selectedObjectIndex].Prefab);
-        
+
+        if (isVideoTaking)
+        {
+             previewObject.layer = LayerMask.NameToLayer("Preview");
+
+             foreach (Transform t in previewObject.GetComponentInChildren<Transform>(true))
+             {
+                 t.gameObject.layer = LayerMask.NameToLayer("Preview");
+             }
+        }
         ApplyPreviewMaterial(previewObject);
     }
 
-   
-    private void ApplyPreviewMaterial(GameObject obj)
+
+    /*private void ApplyPreviewMaterial(GameObject obj)
     {
         objRenderers = obj.GetComponentsInChildren<Renderer>();
         
@@ -465,7 +481,27 @@ public class PlacementSystem : MonoBehaviour
             }
             objRenderer.materials = newMaterial;           
         }
+    }*/
+
+    private void ApplyPreviewMaterial(GameObject obj)
+    {
+        objRenderers = obj.GetComponentsInChildren<Renderer>();
+
+        foreach (Renderer objRenderer in objRenderers)
+        {
+            // 공유 재질 배열로 접근 (복제 방지)
+            Material[] sharedMats = objRenderer.sharedMaterials;
+            Material[] replaced = new Material[sharedMats.Length];
+
+            for (int i = 0; i < sharedMats.Length; i++)
+            {
+                replaced[i] = previewMaterialInstance; // 프리뷰용 공유 재질만 교체
+            }
+
+            objRenderer.sharedMaterials = replaced; // 공유 재질로 적용
+        }
     }
+
     #endregion
 
     #region 오브젝트 배치
@@ -475,8 +511,9 @@ public class PlacementSystem : MonoBehaviour
         if (isDragging) return;
         if (inputManager.IsPointerOverUI())  return;
 
-        
-        
+        buildModeToggle.ResetToBuildMode();
+
+
         //Vector3 mousePosition = inputManager.GetSelectedMapPosition();
         Vector3Int gridPosition = grid.WorldToCell(inputManager.GetSelectedMapPosition());
 
@@ -905,8 +942,29 @@ public class PlacementSystem : MonoBehaviour
     /// </summary>
     public void PurchaseNextLand()
     {
+        switch (currentPurchaseLevel)
+        {
+            case 1:
+                if (PlayerWallet.Instance.money < 1000) return;
+                PlayerWallet.Instance.SpendMoney(1000);
+                break;
+            case 2:
+                if (PlayerWallet.Instance.money < 3000) return;
+                PlayerWallet.Instance.SpendMoney(3000);
+                break;
+            case 3:
+                if (PlayerWallet.Instance.money < 5000) return;
+                    PlayerWallet.Instance.SpendMoney(5000);
+                break;
+
+            default:
+                if (PlayerWallet.Instance.money <= 0) return;
+                break;
+        }
+
+        
         currentPurchaseLevel++;
-        Debug.Log(currentPurchaseLevel);
+        purchaseButtonSystem.ChangeMoneyWhenPurchaseLand(currentPurchaseLevel);
 
         ActivatePlanesByLevel(currentPurchaseLevel);
         UpdateGridBounds();
@@ -930,6 +988,8 @@ public class PlacementSystem : MonoBehaviour
     [SerializeField] List<GameObject> purchase1fPlane_Lv2;
     [SerializeField] List<GameObject> purchase1fPlane_Lv3;
     [SerializeField] List<GameObject> purchase1fPlane_Lv4;
+
+    
 
     /// <summary>
     /// 플레인의 이름에서 뽑아낸 정수와 반환된 정수의 값이 같을 때, 그리드 플레인을 활성화한다. 
@@ -993,7 +1053,7 @@ public class PlacementSystem : MonoBehaviour
     }*/
     #endregion
 
-    #region 2층 구매
+    #region 증축
 
     // 땅이 전부 구매된 후에 2층 해금이 풀림
     // 해금 해제 후에는 2층의 땅을 모두 구입할 필요가 없기 때문에 전부다 비활성화 후 한꺼번에 활성화가 가능
@@ -1017,6 +1077,9 @@ public class PlacementSystem : MonoBehaviour
             Debug.LogWarning("모든 땅을 구매한 후에만 2층을 구매할 수 있습니다.");
             return;
         }
+
+        if (PlayerWallet.Instance.money < 10000) return;
+        PlayerWallet.Instance.SpendMoney(10000);
 
         FloorLock = true;
 
@@ -1275,6 +1338,7 @@ public class PlacementSystem : MonoBehaviour
         inputManager.isDeleteMode = true;
         inputManager.OnClicked += DeleteStructure; // 클릭 시 삭제 함수 호출
         inputManager.OnExit += StopDeleteMode;
+        
         mouseIndicator.SetActive(true); // 인디케이터 활성화
 
 
@@ -1291,7 +1355,7 @@ public class PlacementSystem : MonoBehaviour
 
         inputManager.isDeleteMode = false;
         inputManager.OnClicked -= DeleteStructure;
-        inputManager.OnExit -= StopDeleteMode;        
+        inputManager.OnExit -= StopDeleteMode;
         mouseIndicator.SetActive(false); // 인디케이터 비활성화
         Debug.Log("삭제 모드 종료");
     }

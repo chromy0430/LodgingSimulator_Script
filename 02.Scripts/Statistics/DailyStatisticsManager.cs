@@ -99,7 +99,7 @@ public class DailyStatisticsManager : MonoBehaviour
     private void Start()
     {
         SetupEventSubscriptions();
-        LoadStatistics();
+        // LoadStatistics(); // SaveManager를 통해서만 로드되도록 주석 처리
         StartDataCollection();
         
         // 현재 날의 통계 초기화 (OnDayChanged가 호출되지 않을 경우를 대비)
@@ -125,7 +125,23 @@ public class DailyStatisticsManager : MonoBehaviour
             totalVisitorsToday = 0;
             currentActiveVisitors = 0;
             lastActiveVisitorCount = 0;
-            DebugLog($"현재 날 통계 초기화: {currentDay}일차, StartingGold: {startingGold}", true);
+            
+            // 시작값을 currentDayStatistics에도 저장
+            currentDayStatistics.startingReputation = startingReputation;
+            currentDayStatistics.startingGold = startingGold;
+            
+            DebugLog($"현재 날 통계 초기화: {currentDay}일차, StartingGold: {startingGold}, StartingRep: {startingReputation}", true);
+            
+            // ✅ 초기 데이터 생성 (1일차 데이터가 차트에 표시되도록)
+            UpdateCurrentDayStatistics();
+            DebugLog($"초기 DailyData 생성: {currentDay}일차", true);
+            
+            // 초기화 후 컨테이너 확인
+            DebugLog($"[Start 완료] statisticsContainer.dailyStatistics 개수: {statisticsContainer.dailyStatistics.Count}", true);
+            foreach (var stats in statisticsContainer.dailyStatistics)
+            {
+                DebugLog($"  - Day {stats.day}: dailyData 개수={stats.dailyData?.Count ?? 0}", true);
+            }
         }
         
         if (enableAutoSave)
@@ -375,6 +391,9 @@ public class DailyStatisticsManager : MonoBehaviour
             
             DebugLog($"방문객 수 증가: +{visitorDifference}명 (총: {totalVisitorsToday}명)", true);
             
+            // 통계 자동 업데이트
+            UpdateCurrentDayStatistics();
+            
             // 실시간 이벤트 발생
             NotifyRealtimeDataUpdate();
         }
@@ -416,6 +435,14 @@ public class DailyStatisticsManager : MonoBehaviour
             currentGold // 종료 골드
         );
         
+        // 통계 컨테이너 확인 로그
+        DebugLog($"[통계 저장 확인] statisticsContainer.dailyStatistics 개수: {statisticsContainer.dailyStatistics.Count}", true);
+        for (int i = 0; i < statisticsContainer.dailyStatistics.Count; i++)
+        {
+            var stats = statisticsContainer.dailyStatistics[i];
+            DebugLog($"  - Day {stats.day}: dailyData 개수={stats.dailyData?.Count ?? 0}, Gold={stats.totalGoldEarned}, Rep={stats.totalReputationGained}", true);
+        }
+        
         // 이벤트 발생
         var dailyData = currentDayStatistics.GetDailyData(currentDay);
         if (dailyData != null)
@@ -447,9 +474,13 @@ public class DailyStatisticsManager : MonoBehaviour
         // 현재 값들을 먼저 업데이트
         UpdateCurrentValues();
         
-        // 이전 일차의 데이터가 있다면 먼저 기록
+        // 이전 일차의 데이터가 있다면 먼저 최종 데이터 업데이트 후 기록
         if (currentDayStatistics != null && currentDayStatistics.day < currentDay)
         {
+            // 이전 날의 마지막 상태를 최종 저장
+            UpdateCurrentDayStatistics();
+            DebugLog($"이전 일차 최종 데이터 업데이트: {currentDayStatistics.day}일차", true);
+            
             RecordDailyData();
             DebugLog($"이전 일차 데이터 기록 완료: {currentDayStatistics.day}일차", true);
         }
@@ -466,6 +497,17 @@ public class DailyStatisticsManager : MonoBehaviour
         
         currentDayStatistics.startingReputation = startingReputation;
         currentDayStatistics.startingGold = startingGold;
+        
+        // 새 날의 초기 데이터 생성
+        UpdateCurrentDayStatistics();
+        DebugLog($"새 날 초기 데이터 생성: {currentDay}일차", true);
+        
+        // 통계 컨테이너 전체 확인
+        DebugLog($"[OnDayChanged 완료] statisticsContainer.dailyStatistics 개수: {statisticsContainer.dailyStatistics.Count}", true);
+        foreach (var stats in statisticsContainer.dailyStatistics)
+        {
+            DebugLog($"  - Day {stats.day}: dailyData 개수={stats.dailyData?.Count ?? 0}", true);
+        }
         
         // 새 날 시작 시 실시간 데이터 초기화 이벤트 발생
         NotifyRealtimeDataUpdate();
@@ -497,7 +539,11 @@ public class DailyStatisticsManager : MonoBehaviour
         if (!enableDataCollection) return;
         
         currentReputation = newReputation;
-        DebugLog($"명성도 변경: {newReputation}", showImportantLogsOnly);
+        
+        // 현재 일차의 통계 자동 업데이트
+        UpdateCurrentDayStatistics();
+        
+        DebugLog($"명성도 변경: {newReputation}, 하루 획득: {currentReputation - startingReputation}", showImportantLogsOnly);
     }
     
     /// <summary>
@@ -509,7 +555,90 @@ public class DailyStatisticsManager : MonoBehaviour
         if (!enableDataCollection) return;
         
         currentGold = newMoney;
-        DebugLog($"골드 변경: {newMoney}", showImportantLogsOnly);
+        
+        // 현재 일차의 통계 자동 업데이트
+        UpdateCurrentDayStatistics();
+        
+        DebugLog($"골드 변경: {newMoney}, 하루 획득: {currentGold - startingGold}", showImportantLogsOnly);
+    }
+    
+    /// <summary>
+    /// 현재 일차의 통계 데이터 자동 업데이트
+    /// </summary>
+    private void UpdateCurrentDayStatistics()
+    {
+        if (currentDayStatistics == null)
+        {
+            DebugLog("currentDayStatistics가 null입니다. 초기화를 건너뜁니다.", true);
+            return;
+        }
+        
+        // ✅ currentDayStatistics의 day를 사용 (TimeSystem.CurrentDay가 아님!)
+        int targetDay = currentDayStatistics.day;
+        
+        // 현재 일의 획득량 계산
+        int reputationGained = currentReputation - startingReputation;
+        int goldEarned = currentGold - startingGold;
+        
+        // DailyStatistics 업데이트
+        currentDayStatistics.totalReputationGained = reputationGained;
+        currentDayStatistics.totalGoldEarned = goldEarned;
+        currentDayStatistics.totalVisitors = totalVisitorsToday;
+        
+        // dailyData 리스트에서 해당 일차 데이터 찾기 또는 생성
+        if (currentDayStatistics.dailyData == null)
+        {
+            currentDayStatistics.dailyData = new List<DailyData>();
+        }
+        
+        var todayData = currentDayStatistics.dailyData.Find(d => d.day == targetDay);
+        if (todayData != null)
+        {
+            // 기존 데이터 업데이트
+            todayData.reputationGained = reputationGained;
+            todayData.goldEarned = goldEarned;
+            todayData.totalVisitors = totalVisitorsToday;
+            todayData.endingReputation = currentReputation;
+            todayData.endingGold = currentGold;
+            todayData.lastUpdatedTime = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            DebugLog($"DailyData 업데이트: Day {targetDay}, Gold: {goldEarned}, Rep: {reputationGained}, Visitors: {totalVisitorsToday}", true);
+        }
+        else
+        {
+            // 새 데이터 생성
+            var newData = new DailyData(
+                targetDay,
+                reputationGained,
+                goldEarned,
+                totalVisitorsToday,
+                startingReputation,
+                startingGold,
+                currentReputation,
+                currentGold
+            );
+            currentDayStatistics.dailyData.Add(newData);
+            DebugLog($"새 DailyData 생성: Day {targetDay}, Gold: {goldEarned}, Rep: {reputationGained}, Visitors: {totalVisitorsToday}", true);
+        }
+        
+        // 통계 컨테이너 내 데이터 확인 로그
+        if (statisticsContainer != null)
+        {
+            var containerStats = statisticsContainer.dailyStatistics.Find(s => s.day == targetDay);
+            if (containerStats != null)
+            {
+                DebugLog($"[Container 확인] Day {targetDay}: dailyData Count={containerStats.dailyData?.Count ?? 0}", showImportantLogsOnly);
+            }
+        }
+        
+        // 차트 업데이트 이벤트 발생 (차트가 열려있으면 자동 갱신)
+        if (todayData != null)
+        {
+            OnDailyDataUpdated?.Invoke(todayData);
+        }
+        else if (currentDayStatistics.dailyData.Count > 0)
+        {
+            OnDailyDataUpdated?.Invoke(currentDayStatistics.dailyData[currentDayStatistics.dailyData.Count - 1]);
+        }
     }
     
 
@@ -555,6 +684,9 @@ public class DailyStatisticsManager : MonoBehaviour
                 }
                 
                 DebugLog($"방문객 수 증가 감지: +{increase}명 (총: {totalVisitorsToday}명)", true);
+                
+                // 통계 자동 업데이트
+                UpdateCurrentDayStatistics();
             }
             
             currentActiveVisitors = newActiveCount;

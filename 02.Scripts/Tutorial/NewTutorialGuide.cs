@@ -18,7 +18,7 @@ public class NewTutorialGuide : MonoBehaviour
     private bool isWaitingForAction = false;
     private int initialObjectCount = 0; // 건설 감지를 위한 초기 오브젝트 수
 
-    public bool isTutorialFinish { get; set; } = false;
+    public bool isTutorialFinish = false;
     public static NewTutorialGuide Instance { get; private set; }
 
     // wait 함수 캐싱 
@@ -73,7 +73,8 @@ public class NewTutorialGuide : MonoBehaviour
         }
 
         currentStep = tutorialSteps[currentStepIndex];
-        uiManager.ShowTutorialMessage(currentStep.dialogue.GetLocalizedString());
+        uiManager.ShowTutorialMessage(currentStep.dialogue);
+        //uiManager.ShowTutorialMessage(currentStep.dialogue.GetLocalizedString());
 
         if (!string.IsNullOrEmpty(currentStep.guideAnimationName))
         {
@@ -158,7 +159,7 @@ public class NewTutorialGuide : MonoBehaviour
     private void EndTutorial()
     {
         isTutorialFinish = true;
-        SaveManager.Instance.SaveGame(); // 튜토리얼 끝난 후 강제 저장
+        if (SaveManager.Instance != null) SaveManager.Instance.SaveGame(); // 튜토리얼 끝난 후 강제 저장
         isWaitingForAction = false;
         uiManager.HideTutorial();
         animationManager.HideAllGuides();

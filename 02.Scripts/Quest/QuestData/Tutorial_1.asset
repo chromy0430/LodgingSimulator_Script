@@ -20,7 +20,7 @@ MonoBehaviour:
 
     Press the floor button
     to install the first floor!'
-  characterImage: {fileID: 2800000, guid: 63f77c37f2ced7f45a65bfb3d6a9e2fa, type: 3}
+  characterImage: {fileID: 2800000, guid: 7d29edea193d1b947ab9a30aa4624dcf, type: 3}
   requiredDay: 1
   requiredHour: 12
   requiredMin: 0

@@ -18,9 +18,9 @@ MonoBehaviour:
     \uB2F9\uACA8!\n\uAC70\uC808\uD560\uAEBC\uBA74 \uC67C\uCABD\uC73C\uB85C \uB2F9\uACA8!"
   dialogue_en: 'Pull to the right to accept the quest!
 
-    If you''re going to
-    refuse, pull to the left!'
-  characterImage: {fileID: 2800000, guid: 63f77c37f2ced7f45a65bfb3d6a9e2fa, type: 3}
+    If you''re going to refuse,
+    pull to the left!'
+  characterImage: {fileID: 2800000, guid: 7d29edea193d1b947ab9a30aa4624dcf, type: 3}
   requiredDay: 1
   requiredHour: 11
   requiredMin: 0

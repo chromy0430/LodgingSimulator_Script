@@ -23,7 +23,7 @@ public class ChangeBuildType : MonoBehaviour
 
     private void Start()
     {
-        ChangeBuildTypeButton(0);
+        ChangeBuildTypeButton(2);
     }
 
     /// <summary>

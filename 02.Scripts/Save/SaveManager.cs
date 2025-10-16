@@ -28,6 +28,22 @@ public class SaveData // 저장할 데이터
     public List<string> pendingQuestNames;
     public List<string> availableQuestNames;
     public string currentQuestName;
+
+    // 통계 데이터
+    public List<DailyDataSave> dailyStatistics;
+}
+
+[System.Serializable]
+public class DailyDataSave
+{
+    public int day;
+    public int reputationGained;
+    public int goldEarned;
+    public int totalVisitors;
+    public int startingReputation;
+    public int startingGold;
+    public int endingReputation;
+    public int endingGold;
 }
 
 [System.Serializable]
@@ -95,6 +111,39 @@ public class SaveManager : MonoBehaviour
             });
         }
 
+        // 통계 데이터 저장 준비
+        List<DailyDataSave> statisticsToSave = new List<DailyDataSave>();
+        if (DailyStatisticsManager.Instance != null && DailyStatisticsManager.Instance.StatisticsContainer != null)
+        {
+            Debug.Log($"[SaveManager] 저장할 통계 데이터 확인: statisticsContainer.dailyStatistics 개수={DailyStatisticsManager.Instance.StatisticsContainer.dailyStatistics.Count}");
+
+            // 모든 일차의 통계를 순회
+            foreach (var dailyStats in DailyStatisticsManager.Instance.StatisticsContainer.dailyStatistics)
+            {
+                Debug.Log($"  - Day {dailyStats.day}: dailyData 개수={dailyStats.dailyData?.Count ?? 0}");
+
+                // 각 일차의 dailyData 리스트에서 최신 데이터만 저장 (또는 모든 데이터 저장)
+                if (dailyStats.dailyData != null && dailyStats.dailyData.Count > 0)
+                {
+                    // 각 일차의 마지막 데이터만 저장 (가장 최신)
+                    var latestData = dailyStats.dailyData[dailyStats.dailyData.Count - 1];
+                    statisticsToSave.Add(new DailyDataSave
+                    {
+                        day = latestData.day,
+                        reputationGained = latestData.reputationGained,
+                        goldEarned = latestData.goldEarned,
+                        totalVisitors = latestData.totalVisitors,
+                        startingReputation = latestData.startingReputation,
+                        startingGold = latestData.startingGold,
+                        endingReputation = latestData.endingReputation,
+                        endingGold = latestData.endingGold
+                    });
+                    Debug.Log($"    → Day {latestData.day} 저장: Gold={latestData.goldEarned}, Rep={latestData.reputationGained}");
+                }
+            }
+            Debug.Log($"[SaveManager] 최종 저장될 통계 데이터 개수: {statisticsToSave.Count}");
+        }
+
         SaveData saveData = new SaveData
         {
             playerMoney = PlayerWallet.Instance.money,
@@ -112,6 +161,7 @@ public class SaveManager : MonoBehaviour
             pendingQuestNames = QuestManager.Instance.pendingQuests.AsValueEnumerable().Select(q => q.questName).ToList(),
             availableQuestNames = QuestManager.Instance.availableQuests.AsValueEnumerable().Select(q => q.questName).ToList(),
             currentQuestName = (QuestManager.Instance.CurrentQuest != null) ? QuestManager.Instance.CurrentQuest.questName : null,
+            dailyStatistics = statisticsToSave,
             isTutorialFinished = NewTutorialGuide.Instance.isTutorialFinish
         };
 
@@ -132,6 +182,14 @@ public class SaveManager : MonoBehaviour
         if (!File.Exists(savePath))
         {
             Debug.LogWarning($"세이브 파일이 존재하지 않습니다: {savePath}");
+
+            // 새 게임 시작 - 통계 데이터 초기화
+            if (DailyStatisticsManager.Instance != null)
+            {
+                DailyStatisticsManager.Instance.ClearAllStatistics();
+                Debug.Log("새 게임 시작 - 통계 데이터 초기화됨");
+            }
+
             await LoadMainScene();
             return;
         }
@@ -143,6 +201,14 @@ public class SaveManager : MonoBehaviour
             if (loadedSaveData == null)
             {
                 Debug.LogError("세이브 데이터 역직렬화 실패");
+
+                // 데이터 로드 실패 - 통계 데이터 초기화
+                if (DailyStatisticsManager.Instance != null)
+                {
+                    DailyStatisticsManager.Instance.ClearAllStatistics();
+                    Debug.Log("세이브 데이터 로드 실패 - 통계 데이터 초기화됨");
+                }
+
                 await LoadMainScene();
                 return;
             }
@@ -152,6 +218,14 @@ public class SaveManager : MonoBehaviour
         catch (System.Exception e)
         {
             Debug.LogError($"세이브 파일 로드 오류: {e.Message}");
+
+            // 로드 오류 - 통계 데이터 초기화
+            if (DailyStatisticsManager.Instance != null)
+            {
+                DailyStatisticsManager.Instance.ClearAllStatistics();
+                Debug.Log("세이브 파일 로드 오류 - 통계 데이터 초기화됨");
+            }
+
             await LoadMainScene();
         }
     }
@@ -178,9 +252,21 @@ public class SaveManager : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (scene.name == "MainScene" && loadedSaveData != null)
+        if (scene.name == "MainScene")
         {
-            StartCoroutine(WaitAndRestoreData());
+            if (loadedSaveData != null)
+            {
+                StartCoroutine(WaitAndRestoreData());
+            }
+            else
+            {
+                // 새 게임 시작 시 통계 데이터 초기화
+                if (DailyStatisticsManager.Instance != null)
+                {
+                    DailyStatisticsManager.Instance.ClearAllStatistics();
+                    Debug.Log("메인 씬 로드 - 새 게임 시작, 통계 데이터 초기화됨");
+                }
+            }
         }
     }
 
@@ -241,7 +327,7 @@ public class SaveManager : MonoBehaviour
             PlacementSystem.Instance.currentPurchaseLevel = loadedSaveData.currentPurchaseLevel;
             PlacementSystem.Instance.FloorLock = loadedSaveData.floorLock;
             PlacementSystem.Instance.UpdatePurchaseUI();
-            
+
 
             if (QuestManager.Instance != null && loadedSaveData.activeQuests != null)
             {
@@ -272,7 +358,71 @@ public class SaveManager : MonoBehaviour
             TimeSystem.Instance.SetDateTime(loadedSaveData.currentDay, (int)(loadedSaveData.currentTime / 3600), (int)((loadedSaveData.currentTime % 3600) / 60));
             TimeManager.instance.UpdateDayUI(loadedSaveData.currentDay);
 
-            
+            // 통계 데이터 복원
+            if (DailyStatisticsManager.Instance != null && loadedSaveData.dailyStatistics != null
+                && DailyStatisticsManager.Instance.StatisticsContainer != null)
+            {
+                Debug.Log($"[SaveManager 로드] 불러올 통계 데이터 개수: {loadedSaveData.dailyStatistics.Count}");
+
+                foreach (var savedData in loadedSaveData.dailyStatistics)
+                {
+                    Debug.Log($"  - Day {savedData.day} 복원 시작: Gold={savedData.goldEarned}, Rep={savedData.reputationGained}");
+
+                    // 해당 일차의 통계를 가져오거나 생성
+                    var dailyStats = DailyStatisticsManager.Instance.StatisticsContainer.GetOrCreateDailyStatistics(savedData.day);
+
+                    // DailyData 생성
+                    DailyData dailyData = new DailyData(
+                        savedData.day,
+                        savedData.reputationGained,
+                        savedData.goldEarned,
+                        savedData.totalVisitors,
+                        savedData.startingReputation,
+                        savedData.startingGold,
+                        savedData.endingReputation,
+                        savedData.endingGold
+                    );
+
+                    // dailyData 리스트에 추가 (중복 방지)
+                    if (dailyStats.dailyData == null)
+                    {
+                        dailyStats.dailyData = new List<DailyData>();
+                    }
+
+                    // 이미 존재하는 데이터인지 확인
+                    var existingData = dailyStats.dailyData.Find(d => d.day == savedData.day);
+                    if (existingData == null)
+                    {
+                        dailyStats.dailyData.Add(dailyData);
+                        Debug.Log($"    → Day {savedData.day} dailyData 추가");
+                    }
+                    else
+                    {
+                        // 기존 데이터 업데이트
+                        existingData.reputationGained = savedData.reputationGained;
+                        existingData.goldEarned = savedData.goldEarned;
+                        existingData.totalVisitors = savedData.totalVisitors;
+                        existingData.startingReputation = savedData.startingReputation;
+                        existingData.startingGold = savedData.startingGold;
+                        existingData.endingReputation = savedData.endingReputation;
+                        existingData.endingGold = savedData.endingGold;
+                        Debug.Log($"    → Day {savedData.day} 기존 dailyData 업데이트");
+                    }
+
+                    // 총계 업데이트
+                    dailyStats.totalReputationGained = savedData.reputationGained;
+                    dailyStats.totalGoldEarned = savedData.goldEarned;
+                    dailyStats.totalVisitors = savedData.totalVisitors;
+                }
+
+                Debug.Log($"통계 데이터 복원 완료: {loadedSaveData.dailyStatistics.Count}일치");
+                Debug.Log($"[SaveManager 로드 완료] statisticsContainer.dailyStatistics 최종 개수: {DailyStatisticsManager.Instance.StatisticsContainer.dailyStatistics.Count}");
+                foreach (var stats in DailyStatisticsManager.Instance.StatisticsContainer.dailyStatistics)
+                {
+                    Debug.Log($"  - Day {stats.day}: dailyData 개수={stats.dailyData?.Count ?? 0}");
+                }
+            }
+
             PlacementSystem.Instance.ActivatePlanesByLevel(loadedSaveData.currentPurchaseLevel);
             PlacementSystem.Instance.UpdateGridBounds();
             PlacementSystem.Instance.HideAllPlanes();
@@ -380,7 +530,7 @@ public class SaveManager : MonoBehaviour
                 {
                     Debug.LogError($"로드 실패 - key: {entry.key}, ID: {placementData.ID}");
                 }
-            }            
+            }
         }
     }
 
@@ -388,11 +538,12 @@ public class SaveManager : MonoBehaviour
     {
         if (ObjectPlacer.Instance != null)
         {
-            for (int i = 0; i < ObjectPlacer.Instance.placedGameObjects.Count; i++)
+            for (int i = ObjectPlacer.Instance.placedGameObjects.Count - 1; i >= 0; i--)
             {
                 if (ObjectPlacer.Instance.placedGameObjects[i] != null)
                 {
-                    ObjectPlacer.Instance.RemoveObject(i);
+                    // 애니메이션이 있는 RemoveObject 대신 즉시 삭제하는 RemoveObjectImmediate를 호출합니다.
+                    ObjectPlacer.Instance.RemoveObjectImmediate(i);
                 }
             }
             ObjectPlacer.Instance.placedGameObjects.Clear();
@@ -422,7 +573,7 @@ public class SaveManager : MonoBehaviour
     /// <returns>계산된 층 번호 (예: 1, 2, 3...)</returns>
     private int ConvertGridYToFloorNumber(int gridY)
     {
-        switch(gridY) 
+        switch (gridY)
         {
             case 0:
                 return 1;
@@ -451,15 +602,29 @@ public class SaveManager : MonoBehaviour
             case 2:
                 return 4.8175f;
             case 3:
-                return 9.63405f;
+                return 9.635401f;
             case 4:
-                return 14.45f;
+                return 14.45425f;
             case 5:
-                return 19.2675f; // 14.45 + 4.8175
+                return 19.28355f; // 14.45 + 4.8175
             case 6:
-                return 24.085f;
+                return 24.115f; // 24.109 변경 예정 / 현재 24.07925 24.255 - 24.109
             default:
                 return 0;
+                /*case 1:
+                    return 0;
+                case 2:
+                    return 4.8175f;
+                case 3:
+                    return 9.63405f;
+                case 4:
+                    return 14.45f;
+                case 5:
+                    return 19.2675f; // 14.45 + 4.8175
+                case 6:
+                    return 24.085f;
+                default:
+                    return 0;*/
         }
     }
 }

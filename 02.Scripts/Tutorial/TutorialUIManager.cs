@@ -1,6 +1,8 @@
 using System.Collections;
-using UnityEngine;
 using TMPro;
+using UnityEngine;
+using UnityEngine.Localization;
+using UnityEngine.Localization.Settings;
 using UnityEngine.UI;
 
 public class TutorialUIManager : MonoBehaviour
@@ -14,14 +16,32 @@ public class TutorialUIManager : MonoBehaviour
     [SerializeField] private float typingSpeed = 0.05f; // 한 글자가 나타나는 시간 (초)
 
     private Coroutine typingCoroutine; // 현재 실행 중인 타이핑 코루틴
-
+    private LocalizedString currentDialogue;
     public bool IsTyping { get; private set; }
 
-    private void Awake()
+    private void OnEnable()
     {
+#pragma warning disable UDR0005 // Domain Reload Analyzer
+        LocalizationSettings.SelectedLocaleChanged += OnLocaleChanged;
+#pragma warning restore UDR0005 // Domain Reload Analyzer
         if (tutorialPanel != null)
         {
             tutorialPanel.SetActive(false);
+        }
+    }
+
+    private void OnDisable()
+    {
+        LocalizationSettings.SelectedLocaleChanged -= OnLocaleChanged;
+    }
+
+    private void OnLocaleChanged(Locale newLocale)
+    {
+        // 튜토리얼 패널이 활성화되어 있고, 표시할 대화가 있을 때만 텍스트를 새로고침
+        if (tutorialPanel.activeSelf && currentDialogue != null)
+        {
+            // 현재 대화의 번역된 텍스트를 가져와 타이핑 애니메이션을 다시 시작
+            StartTypingAnimation(currentDialogue.GetLocalizedString());
         }
     }
 
@@ -39,18 +59,22 @@ public class TutorialUIManager : MonoBehaviour
     /// 튜토리얼 메시지를 화면에 표시합니다.
     /// </summary>
     /// <param name="message">화면에 출력할 메시지 내용</param>
-    public void ShowTutorialMessage(string message)
+    public void ShowTutorialMessage(LocalizedString message)
     {
         if (tutorialPanel == null || tutorialText == null)
         {
             Debug.LogError("튜토리얼 UI가 설정되지 않았습니다!");
             return;
         }
-     
+
+        currentDialogue = message;
+
         tutorialPanel.SetActive(true);
         tutorialCharacter.gameObject.SetActive(true);
 
-        StartTypingAnimation(message);
+        StartTypingAnimation(message.GetLocalizedString());
+
+        //StartTypingAnimation(message);
     }
 
     /// <summary>

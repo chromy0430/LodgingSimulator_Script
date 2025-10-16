@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class SettingUI : MonoBehaviour
 {
@@ -36,6 +37,11 @@ public class SettingUI : MonoBehaviour
             }
         }
     }    
+
+    public void Btn_ExitButton()
+    {
+        this.gameObject.SetActive(false);
+    }
 
     public void Btn_Graphic()
     {

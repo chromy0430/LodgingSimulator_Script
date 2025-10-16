@@ -45,6 +45,7 @@ public class InputManager : MonoBehaviour
     public GameObject targetObject;
     public GameObject QuestUI;    
     public GameObject HiringUI;
+    public GameObject StatisticUI;
     public Button SettingBtn;
 
     [Header("언어별 설정 이미지")]
@@ -175,6 +176,8 @@ public class InputManager : MonoBehaviour
 
     private void OnOffSettingUI()
     {
+        if (StatisticUI.activeSelf) StatisticUI.SetActive(false);
+
         // UI가 비활성화 상태일 때 -> 열기
         if (!SettingUI.activeSelf)
         {
@@ -203,9 +206,6 @@ public class InputManager : MonoBehaviour
                     SettingUI2.SetActive(false);
                 });
         }
-
-        //SettingUI.SetActive(!SettingUI.activeSelf);
-        //if(SettingUI2.activeSelf) SettingUI2.SetActive(false);
     }
 
     private void UpdateSettingImages()
@@ -446,11 +446,60 @@ public class InputManager : MonoBehaviour
             return null;
         }
 
+
         Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit, 100f, objectLayer))
+        RaycastHit[] hits = Physics.RaycastAll(ray, 100f, objectLayer);
+
+        if (hits.Length == 0)
+        {
+            return null;
+        }
+
+        System.Array.Sort(hits, (x, y) => x.distance.CompareTo(y.distance));
+
+        foreach (var hit in hits)
         {
             Transform currentTransform = hit.collider.transform;
+            GameObject rootObject = null;
 
+            // 최상위 부모 오브젝트(ObjectPlacer에 등록된 오브젝트)를 찾습니다.
+            while (currentTransform != null)
+            {
+                if (ObjectPlacer.Instance.placedGameObjects.Contains(currentTransform.gameObject))
+                {
+                    rootObject = currentTransform.gameObject;
+                    break;
+                }
+                currentTransform = currentTransform.parent;
+            }
+
+            if (rootObject != null)
+            {
+                // 삭제 모드가 아니라면, 가장 가까운 첫 번째 오브젝트를 바로 반환합니다.
+                if (!isDeleteMode)
+                {
+                    return rootObject;
+                }
+
+                // 삭제 모드일 경우, 이 오브젝트가 현재 층에 있는지 확인합니다.
+                int currentFloorLayer = LayerMask.NameToLayer($"{changeFloorSystem.currentFloor}F");
+
+                // 자식 오브젝트들을 순회하며 레이어를 확인합니다.
+                foreach (Transform child in rootObject.GetComponentsInChildren<Transform>(true))
+                {
+                    if (child.gameObject.layer == currentFloorLayer)
+                    {
+                        // 자식 중 하나라도 현재 층의 레이어와 일치하면, 이것이 바로 우리가 찾던 오브젝트입니다.
+                        return rootObject;
+                    }
+                }
+                // 현재 층의 오브젝트가 아니면, 다음으로 가까운 오브젝트를 계속 확인하기 위해 루프를 계속합니다.
+            }
+        }
+
+        /*if (Physics.Raycast(ray, out RaycastHit hit, 100f, objectLayer))
+        {
+            Transform currentTransform = hit.collider.transform;
             // [핵심 수정]
             // 레이캐스트에 맞은 지점부터 시작해서 부모로 거슬러 올라가며,
             // ObjectPlacer가 관리하는 placedGameObjects 리스트에 포함된 오브젝트를 찾습니다.
@@ -464,16 +513,8 @@ public class InputManager : MonoBehaviour
                 // 못 찾으면 한 단계 위 부모로 이동하여 다시 검사합니다.
                 currentTransform = currentTransform.parent;
             }
-        }
-
-        /*Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit2, 100f, objectLayer))
-        {
-            // 클릭한 오브젝트의 루트 오브젝트 반환
-            GameObject clickedObject = hit2.collider.gameObject;
-            //Debug.Log($"선택된 오브젝트 : {clickedObject}");
-            return clickedObject.transform.root.gameObject;
         }*/
+
         return null;
     }
 

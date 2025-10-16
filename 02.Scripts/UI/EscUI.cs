@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,6 +17,7 @@ public class EscUI : MonoBehaviour
     [SerializeField] private Button btn_StatisticUI;
     [SerializeField] private GameObject m_StatisticUI;
 
+    [SerializeField] private GameObject m_SaveCheckingUI;
     private void Start()
     {
         if (PreExitUI != null)
@@ -34,6 +36,16 @@ public class EscUI : MonoBehaviour
     private void Btn_Save()
     {
         SaveManager.Instance.SaveGame();
+        StartCoroutine(CheckSave());
+    }
+
+    private IEnumerator CheckSave()
+    {
+        m_SaveCheckingUI.SetActive(true);
+
+        yield return new WaitForSecondsRealtime(1f);
+
+        m_SaveCheckingUI.SetActive(false);
     }
 
     private void Btn_Setting()

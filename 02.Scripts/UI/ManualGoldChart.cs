@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -54,6 +55,7 @@ public class ManualGoldChart : MonoBehaviour
     private List<GameObject> dayLabels = new List<GameObject>();
     private List<GameObject> goldLabels = new List<GameObject>();
     private List<GameObject> goldValueLabels = new List<GameObject>(); // 점 위 골드량 라벨들
+    private List<GameObject> lineObjects = new List<GameObject>(); // 점들을 연결하는 선들
     private LineRenderer gridRenderer;
     
     // 실시간 데이터 관리
@@ -124,11 +126,11 @@ public class ManualGoldChart : MonoBehaviour
     
     private void SetupEvents()
     {
-        // 차트 패널 초기 상태 설정
+        // 차트 패널 초기 상태 설정 - 골드 차트는 기본으로 열림
         if (chartPanel != null)
         {
-            chartPanel.SetActive(true);
-            isPanelOpen = false;
+            chartPanel.SetActive(true); // 골드 차트 패널 전체 켜짐
+            isPanelOpen = true; // 골드 차트는 기본으로 열림
         }
                
         // 통계 매니저 이벤트 구독
@@ -137,7 +139,7 @@ public class ManualGoldChart : MonoBehaviour
             DailyStatisticsManager.OnDailyDataUpdated += OnDailyDataUpdated;
             DailyStatisticsManager.OnDayReset += OnDayReset;
             DailyStatisticsManager.OnChartOpened += OnOtherChartOpened;
-            DailyStatisticsManager.OnRealtimeDataUpdated += OnRealtimeDataUpdated;
+            // OnRealtimeDataUpdated 제거 - DailyStatisticsManager에서 직접 데이터 가져옴
         }
         
         // 토글 버튼 이벤트
@@ -160,7 +162,7 @@ public class ManualGoldChart : MonoBehaviour
             DailyStatisticsManager.OnDailyDataUpdated -= OnDailyDataUpdated;
             DailyStatisticsManager.OnDayReset -= OnDayReset;
             DailyStatisticsManager.OnChartOpened -= OnOtherChartOpened;
-            DailyStatisticsManager.OnRealtimeDataUpdated -= OnRealtimeDataUpdated;
+            // OnRealtimeDataUpdated 제거
         }
         
         if (toggleButton != null)
@@ -187,6 +189,12 @@ public class ManualGoldChart : MonoBehaviour
         if (showGrid)
         {
             CreateGrid();
+        }
+        
+        // 초기 차트 그리기 (골드 차트는 기본으로 열림)
+        if (isPanelOpen)
+        {
+            RefreshChart();
         }
         
         DebugLog("골드 차트 초기화 완료");
@@ -224,27 +232,8 @@ public class ManualGoldChart : MonoBehaviour
         }
     }
     
-    private void OnRealtimeDataUpdated(int reputationGained, int goldEarned, int visitors)
-    {
-        // 실시간 데이터 업데이트
-        currentDayRealtimeReputation = reputationGained;
-        currentDayRealtimeGold = goldEarned;
-        currentDayRealtimeVisitors = visitors;
-        
-        // 현재 일차 업데이트
-        if (JY.TimeSystem.Instance != null)
-        {
-            currentDay = JY.TimeSystem.Instance.CurrentDay;
-        }
-        
-        // 차트가 열려있으면 실시간으로 업데이트
-        if (isPanelOpen)
-        {
-            UpdateRealtimeChart();
-        }
-        
-        DebugLog($"실시간 데이터 업데이트: Day {currentDay}, Gold+{goldEarned}, Rep+{reputationGained}, Visitors:{visitors}");
-    }
+    // OnRealtimeDataUpdated 제거됨 - DailyStatisticsManager에서 직접 데이터를 가져와서 사용
+    // 실시간 업데이트는 OnDailyDataUpdated 이벤트를 통해 처리됨
     
     #endregion
     
@@ -291,6 +280,7 @@ public class ManualGoldChart : MonoBehaviour
         
         // 새 차트 요소들 생성
         CreateChartPoints(combinedData);
+        CreateLinesBetweenPoints(); // 점들을 선으로 연결
         CreateDayLabels();
         CreateGoldValueLabels(); // 각 포인트 위에 골드량 표시
         CreateGoldLabels(); // Y축 라벨을 데이터에 맞춰서 동적 생성
@@ -303,30 +293,33 @@ public class ManualGoldChart : MonoBehaviour
     }
     
     /// <summary>
-    /// 실시간 데이터와 저장된 데이터를 합쳐서 반환
+    /// DailyStatisticsManager에서 저장된 데이터 가져오기
     /// </summary>
     private List<DailyData> GetCombinedData()
     {
-        var combinedData = new List<DailyData>(goldData);
+        var combinedData = new List<DailyData>();
         
-        // 현재 일차의 실시간 데이터 추가/업데이트 (값이 0이어도 현재 일차는 표시)
-        var existingCurrentDay = combinedData.Find(d => d.day == currentDay);
-        if (existingCurrentDay != null)
+        // DailyStatisticsManager에서 모든 일차의 데이터 가져오기
+        if (DailyStatisticsManager.Instance != null && DailyStatisticsManager.Instance.StatisticsContainer != null)
         {
-            // 기존 데이터 업데이트
-            existingCurrentDay.goldEarned = currentDayRealtimeGold;
-            existingCurrentDay.reputationGained = currentDayRealtimeReputation;
-            existingCurrentDay.totalVisitors = currentDayRealtimeVisitors;
-        }
-        else
-        {
-            // 새 데이터 추가 (현재 일차는 값이 0이어도 표시)
-            combinedData.Add(new DailyData(currentDay, currentDayRealtimeReputation, currentDayRealtimeGold, 
-                                         currentDayRealtimeVisitors, 0, 0, 0, 0));
+            DebugLog($"[GetCombinedData] statisticsContainer.dailyStatistics 개수: {DailyStatisticsManager.Instance.StatisticsContainer.dailyStatistics.Count}");
+            
+            foreach (var dailyStats in DailyStatisticsManager.Instance.StatisticsContainer.dailyStatistics)
+            {
+                if (dailyStats.dailyData != null && dailyStats.dailyData.Count > 0)
+                {
+                    // 각 일차의 마지막 데이터 (가장 최신) 추가
+                    var latestData = dailyStats.dailyData[dailyStats.dailyData.Count - 1];
+                    combinedData.Add(latestData);
+                    DebugLog($"  - Day {latestData.day}: Gold={latestData.goldEarned}, Rep={latestData.reputationGained}, Visitors={latestData.totalVisitors}");
+                }
+            }
         }
         
         // 일차순으로 정렬
         combinedData.Sort((a, b) => a.day.CompareTo(b.day));
+        
+        DebugLog($"[GetCombinedData] 최종 combinedData 개수: {combinedData.Count}");
         
         return combinedData;
     }
@@ -365,9 +358,10 @@ public class ManualGoldChart : MonoBehaviour
             
         float actualMaxGold = 0f;
         
-        // 실제 최대 골드 획득량 찾기
+        // 실제 최대 골드 획득량 찾기 (양수만)
         foreach (var item in data)
         {
+            // 음수는 0으로 표시되므로 양수만 고려
             if (item.goldEarned > actualMaxGold)
             {
                 actualMaxGold = item.goldEarned;
@@ -430,6 +424,16 @@ public class ManualGoldChart : MonoBehaviour
         }
         chartPoints.Clear();
         
+        // 선 오브젝트들 정리
+        foreach (var line in lineObjects)
+        {
+            if (line != null)
+            {
+                DestroyImmediate(line);
+            }
+        }
+        lineObjects.Clear();
+        
         // 일차 라벨들 정리
         foreach (var label in dayLabels)
         {
@@ -473,13 +477,14 @@ public class ManualGoldChart : MonoBehaviour
             // X 좌표 계산 (고정된 daySpacing 간격으로)
             float x = ChartStartX + i * daySpacing;
             
-            // Y 좌표 계산 (0~maxGold를 차트 높이에 매핑)
-            float normalizedY = item.goldEarned / maxGold; // 0~1로 정규화
+            // Y 좌표 계산 (음수는 0 위치에 고정)
+            float displayValue = Mathf.Max(0, item.goldEarned); // 음수면 0으로
+            float normalizedY = displayValue / maxGold; // 0~1로 정규화
             float y = ChartStartY + normalizedY * ActualChartHeight;
             
             Vector2 position = new Vector2(x, y);
             
-            // 차트 포인트 생성
+            // 차트 포인트 생성 (실제 goldEarned 값 저장 - 음수 포함)
             ChartPoint chartPoint = new ChartPoint(item.day, item.goldEarned, position);
             chartPoint.pointObject = CreatePointObject(position, item);
             
@@ -504,8 +509,9 @@ public class ManualGoldChart : MonoBehaviour
         // X 좌표 계산
         float x = ChartStartX + currentDayIndex * daySpacing;
         
-        // Y 좌표 계산
-        float normalizedY = currentDayData.goldEarned / maxGold;
+        // Y 좌표 계산 (음수는 0 위치에 고정)
+        float displayValue = Mathf.Max(0, currentDayData.goldEarned); // 음수면 0으로
+        float normalizedY = displayValue / maxGold;
         float y = ChartStartY + normalizedY * ActualChartHeight;
         
         Vector2 position = new Vector2(x, y);
@@ -514,7 +520,7 @@ public class ManualGoldChart : MonoBehaviour
         if (chartPoints.ContainsKey(currentDay))
         {
             var existingPoint = chartPoints[currentDay];
-            existingPoint.gold = currentDayData.goldEarned;
+            existingPoint.gold = currentDayData.goldEarned; // 실제 값 저장 (음수 포함)
             existingPoint.position = position;
             
             if (existingPoint.pointObject != null)
@@ -534,7 +540,7 @@ public class ManualGoldChart : MonoBehaviour
             chartPoints[currentDay] = chartPoint;
         }
         
-        // 골드량 라벨도 업데이트
+        // 골드량 라벨도 업데이트 (실제 값 표시 - 음수 포함)
         UpdateCurrentDayValueLabel(currentDayData.goldEarned, position);
         
         DebugLog($"현재 일차 포인트 업데이트: Day {currentDay}, Gold+{currentDayData.goldEarned}");
@@ -619,6 +625,55 @@ public class ManualGoldChart : MonoBehaviour
         rectTransform.anchoredPosition = position;
         
         return pointObj;
+    }
+    
+    /// <summary>
+    /// 차트 포인트들을 선으로 연결
+    /// </summary>
+    private void CreateLinesBetweenPoints()
+    {
+        if (chartPoints.Count < 2) return;
+        
+        // 일차 순서대로 정렬
+        var sortedPoints = chartPoints.Values.OrderBy(p => p.day).ToList();
+        
+        for (int i = 0; i < sortedPoints.Count - 1; i++)
+        {
+            var currentPoint = sortedPoints[i];
+            var nextPoint = sortedPoints[i + 1];
+            
+            // 선 오브젝트 생성
+            GameObject lineObj = new GameObject($"Line_Day{currentPoint.day}_to_Day{nextPoint.day}");
+            lineObj.transform.SetParent(contentArea);
+            
+            // Image 컴포넌트로 선 그리기
+            var lineImage = lineObj.AddComponent<Image>();
+            lineImage.color = pointColor;
+            
+            // RectTransform 설정
+            var rectTransform = lineObj.GetComponent<RectTransform>();
+            rectTransform.anchorMin = new Vector2(0, 0);
+            rectTransform.anchorMax = new Vector2(0, 0);
+            
+            // 두 점 사이의 거리와 각도 계산
+            Vector2 direction = nextPoint.position - currentPoint.position;
+            float distance = direction.magnitude;
+            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+            
+            // 선의 위치와 크기 설정
+            rectTransform.sizeDelta = new Vector2(distance, 2f); // 선 길이 원래대로, 두께 2픽셀
+            rectTransform.anchoredPosition = currentPoint.position;
+            rectTransform.pivot = new Vector2(0, 0.5f);
+            rectTransform.localEulerAngles = new Vector3(0, 0, angle);  
+            
+            // 선을 포인트보다 뒤에 배치
+            lineObj.transform.SetAsFirstSibling();
+            
+            // 생성한 선을 리스트에 추가
+            lineObjects.Add(lineObj);
+        }
+        
+        DebugLog($"차트 포인트들을 선으로 연결: {sortedPoints.Count - 1}개의 선");
     }
     
     private void CreateGrid()
@@ -777,12 +832,15 @@ public class ManualGoldChart : MonoBehaviour
         var text = labelObj.AddComponent<TextMeshProUGUI>();
         text.text = gold.ToString();
         text.fontSize = 14; // 큰 화면에 맞게 증가
-        text.color = Color.cyan;
+        
+        // 음수면 빨간색, 양수면 cyan
+        text.color = gold < 0 ? Color.red : Color.cyan;
+        
         text.alignment = TextAlignmentOptions.Center;
         text.fontStyle = FontStyles.Bold;
         
         var rectTransform = labelObj.GetComponent<RectTransform>();
-        rectTransform.sizeDelta = new Vector2(50, 15);
+        rectTransform.sizeDelta = new Vector2(60, 15); // 음수 표시를 위해 너비 증가
         rectTransform.anchorMin = new Vector2(0, 0);
         rectTransform.anchorMax = new Vector2(0, 0);
         rectTransform.anchoredPosition = position;
@@ -796,13 +854,15 @@ public class ManualGoldChart : MonoBehaviour
     
     public void TogglePanel()
     {
-        if (isPanelOpen)
+        // 이미 열려있다면 다시 열기만 함 (닫지 않음)
+        if (!isPanelOpen)
         {
-            ClosePanel();
+            OpenPanel();
         }
         else
         {
-            OpenPanel();
+            // 이미 열려있으면 차트만 새로고침
+            RefreshChart();
         }
     }
     

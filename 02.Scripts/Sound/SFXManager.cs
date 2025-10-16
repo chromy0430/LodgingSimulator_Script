@@ -6,6 +6,7 @@ public enum SoundType
     Click,
     UI,
     Unlock,
+    Remove,
     Failed
 }
 public class SFXManager : MonoBehaviour

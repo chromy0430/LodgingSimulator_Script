@@ -18,8 +18,9 @@ public class CounterManager : MonoBehaviour
     [SerializeField] private bool requiresEmployee = true;
     [Tooltip("현재 배정된 직원")]
     [SerializeField] private AIEmployee assignedEmployee = null;
-    [Tooltip("직원이 없을 때 표시할 메시지")]
-    [SerializeField] private string noEmployeeMessage = "직원을 고용해주세요";
+    
+    //[Tooltip("직원이 없을 때 표시할 메시지")]
+    //[SerializeField] private string noEmployeeMessage = "직원을 고용해주세요";
 
     // 통합 대기열 - 방 배정과 방 사용완료 보고를 모두 처리
     private Queue<AIAgent> waitingQueue = new Queue<AIAgent>();

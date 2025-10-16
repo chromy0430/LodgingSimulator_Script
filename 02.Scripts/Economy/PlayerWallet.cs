@@ -5,7 +5,7 @@ public class PlayerWallet : MonoBehaviour
 {
     public static PlayerWallet Instance { get; set; }
     
-    public int money = 1000;
+    public int money = 100;
     public event Action<int> OnMoneyChanged; // 돈이 변경될 때 발동할 이벤트
 
     [SerializeField] private RectTransform moneyTextTransform;

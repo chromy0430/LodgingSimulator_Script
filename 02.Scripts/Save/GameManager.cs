@@ -23,6 +23,7 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
+        if (SaveManager.Instance == null) return;
         // 자동 저장
         timeSinceLastSave += Time.deltaTime;
         if (timeSinceLastSave >= autoSaveInterval)

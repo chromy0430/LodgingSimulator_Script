@@ -42,19 +42,23 @@ public class ChangeFloorSystem : MonoBehaviour
                 cameraCon.SetOffset(30);
                 break;
             case 3:
-                newCellSize.y = 2.154f - 0.0131f;//3.854f; // 1.927 * 2 (예상값, 필요 시 조정) 2.154f;/
+                newCellSize.y = 2.154f - 0.0131f + 0.0003f;//3.854f; // 1.927 * 2 (예상값, 필요 시 조정) 2.154f;/
                 cameraCon.SetOffset(35);
                 break;
             case 4:
-                newCellSize.y = 1.7f; //5.781f; // 1.927 * 3 (예상값, 필요 시 조정) 
+                newCellSize.y = 1.7f + 0.0005f; //5.781f; // 1.927 * 3 (예상값, 필요 시 조정) 
                 cameraCon.SetOffset(40);                
                 break;
             case 5:
-                newCellSize.y = 1.168f;
+                newCellSize.y = 1.168f + 0.0007f;
                 cameraCon.SetOffset(45);
                 break;
             case 6:
-                newCellSize.y = 0.74f;
+                // 기본 0.75f; = 24.05 목표 24.105
+                // - 0.002 = 23.985, 
+                // + 0.015 = 23.7825
+                // 0.002 완료
+                newCellSize.y = 0.74f + 0.002f; 
                 cameraCon.SetOffset(50);
                 break;
         }

@@ -216,7 +216,7 @@ MonoBehaviour:
     <ID>k__BackingField: 16
     <kindIndex>k__BackingField: 1
     IsWall: 0
-    <Size>k__BackingField: {x: 2, y: 1}
+    <Size>k__BackingField: {x: 2, y: 2}
     <Prefab>k__BackingField: {fileID: 6797451524426507159, guid: 317669bd0c5902d45a938da3e5914777, type: 3}
     <BuildPrice>k__BackingField: 20
     <BasePrice>k__BackingField: 25

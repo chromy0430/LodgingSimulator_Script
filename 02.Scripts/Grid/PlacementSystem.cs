@@ -458,7 +458,15 @@ public class PlacementSystem : MonoBehaviour
              foreach (Transform t in previewObject.GetComponentInChildren<Transform>(true))
              {
                  t.gameObject.layer = LayerMask.NameToLayer("Preview");
-             }
+                foreach (Transform t2 in t.GetComponentInChildren<Transform>(true))
+                {
+                    t2.gameObject.layer = LayerMask.NameToLayer("Preview");
+                    foreach (Transform t3 in t2.GetComponentInChildren<Transform>(true))
+                    {
+                        t3.gameObject.layer = LayerMask.NameToLayer("Preview");
+                    }
+                }
+            }
         }
         ApplyPreviewMaterial(previewObject);
     }
@@ -557,6 +565,10 @@ public class PlacementSystem : MonoBehaviour
     #region 점유상태 확인
     private bool CheckPlacementValidity(Vector3Int gridPosition, int selectedObjectIndex, Quaternion rotation)
     {
+        int currentFloor = changeFloorSystem.currentFloor;
+        string floorLayerName = $"{currentFloor}F";
+        int currentFloorLayerMask = LayerMask.GetMask(floorLayerName);
+
         ObjectData objectToPlace = database.objectsData[selectedObjectIndex];
         bool placingWall = objectToPlace.IsWall;
         GameObject prefab = database.objectsData[selectedObjectIndex].Prefab;
@@ -627,72 +639,93 @@ public class PlacementSystem : MonoBehaviour
         {
             // 가구의 실제 월드 좌표 기준 크기와 중심을 계산             
             GameObject tempObject = Instantiate(prefab, grid.GetCellCenterWorld(gridPosition), rotation);
-        
-             // 콜라이더를 가져옴
-             Collider objCollider = tempObject.GetComponent<Collider>();
-             if (objCollider is null)
-             {
-                 objCollider = tempObject.GetComponentInChildren<Collider>();
-             }
-    
-             if (objCollider is null)
-             {
-                 Destroy(tempObject);
-                 return furnitureData.CanPlaceObjectAt(gridPosition, objectToPlace.Size, rotation, grid, placingWall);
-             }
+
+            BoxCollider objCollider = tempObject.GetComponentInChildren<BoxCollider>();
+            // 콜라이더를 가져옴
+            //Collider objCollider = tempObject.GetComponent<Collider>();
+            if (objCollider is null)
+            {
+                objCollider = tempObject.GetComponentInChildren<BoxCollider>();                
+            }
+
+            if (objCollider is null)
+            {
+                Destroy(tempObject);
+                return furnitureData.CanPlaceObjectAt(gridPosition, objectToPlace.Size, rotation, grid, placingWall);
+            }
 
             // 충돌 검사를 위해 콜라이더는 유지하고 렌더러는 비활성화
             Renderer[] renderers = tempObject.GetComponentsInChildren<Renderer>();
-             foreach (Renderer renderer in renderers)
-             {
-                 renderer.enabled = false;
-             }
+            foreach (Renderer renderer in renderers)
+            {
+                renderer.enabled = false;
+            }
 
             // 마진 값 조정 (더 작은 값으로 검사 영역 축소)
-            float collisionMargin = 0.05f; // 5cm 마진
-        
-             Vector3 colliderCenter = objCollider.bounds.center;
-             Vector3 colliderSize = objCollider.bounds.size - new Vector3(collisionMargin, collisionMargin, collisionMargin);
-        
-             // 디버그 시각화 - 실제 검사 영역 확인용
-             Debug.DrawLine(colliderCenter - colliderSize/2, colliderCenter + colliderSize/2, Color.red, 2f);
-        
-             // 벽 레이어만 검사
-             int wallLayerMask = LayerMask.GetMask("Wall");
-             
-             // 더 정확한 충돌 검사 방법 - 다중 Raycast 사용
-             bool collision = false;
-        
-             // 콜라이더 경계 상자의 8개 코너에서 레이캐스트
-             Vector3[] corners = new Vector3[8];
-             corners[0] = new Vector3(-1, -1, -1);
-             corners[1] = new Vector3(1, -1, -1);
-             corners[2] = new Vector3(-1, 1, -1);
-             corners[3] = new Vector3(1, 1, -1);
-             corners[4] = new Vector3(-1, -1, 1);
-             corners[5] = new Vector3(1, -1, 1);
-             corners[6] = new Vector3(-1, 1, 1);
-             corners[7] = new Vector3(1, 1, 1);
-    
-             // 콜라이더 경계에서 중심으로 레이캐스트
-             foreach (Vector3 cornerDir in corners)
+            //float collisionMargin = 0.05f; // 5cm 마진
+            int wallLayerMask = LayerMask.GetMask("Wall");
+
+            Vector3 center = tempObject.transform.TransformPoint(objCollider.center);
+            Vector3 size = Vector3.Scale(objCollider.size, tempObject.transform.lossyScale); // 스케일 적용된 전체 크기
+            Vector3 halfExtents = size / 2f;
+            halfExtents -= new Vector3(0.01f, 0.01f, 0.01f);
+
+            //Vector3 colliderCenter = objCollider.bounds.center;
+            //Vector3 halfExtents = objCollider.bounds.extents - new Vector3(0.1f, 0.1f, 0.1f); // 약간 줄여서 꽉 끼는 것 허용
+
+            DrawWireCube(center, halfExtents * 2, rotation, Color.red, 2.0f);
+
+            // OverlapBox를 사용하여 지정된 영역에 'Wall' 레이어의 콜라이더가 있는지 확인
+            Collider[] hitColliders = Physics.OverlapBox(center, halfExtents, rotation, wallLayerMask);
+            if (hitColliders.Length > 0)
+            {
+                Debug.Log($"[배치 불가] 가구가 벽과 충돌했습니다. 위치: {gridPosition}");
+                Destroy(tempObject);
+                return false; // 벽과 충돌했으므로 배치 불가
+            }
+
+            // 25-10-16 수정, 전부 주석처리
+            // 디버그 시각화 - 실제 검사 영역 확인용
+            //Debug.DrawLine(colliderCenter - colliderSize/2, colliderCenter + colliderSize/2, Color.red, 2f);
+
+            /*
+            // 더 정확한 충돌 검사 방법 - 다중 Raycast 사용
+            bool collision = false;        
+            // 콜라이더 경계 상자의 8개 코너에서 레이캐스트
+            Vector3[] corners = new Vector3[4];            
+            corners[0] = new Vector3(-1, -1, -1);
+            corners[1] = new Vector3(1, -1, -1);
+            corners[2] = new Vector3(-1, -1, 1);
+            corners[3] = new Vector3(1, -1, 1);
+
+            // 콜라이더 경계에서 중심으로 레이캐스트
+            foreach (Vector3 cornerDir in corners)
              {
-                 Vector3 startPos = colliderCenter + Vector3.Scale(cornerDir, colliderSize / 2f);
-                 Vector3 direction = -cornerDir.normalized;
-                 float distance = colliderSize.magnitude / 2f;
+                //colliderCenter.y -= 2f;
+                Vector3 startPos = colliderCenter + Vector3.Scale(cornerDir, colliderSize / 2f);
+                Vector3 direction = -cornerDir.normalized;
+                float distance = colliderSize.magnitude / 2f;
             
-                 Debug.DrawRay(startPos, direction * distance, Color.yellow, 2f);
+                 Debug.DrawRay(startPos, direction * distance, Color.black, 2f);
             
                  if (Physics.Raycast(startPos, direction, distance, wallLayerMask))
                  {
+                    Debug.Log("45678");
                      collision = true;
-                     Debug.DrawRay(startPos, direction * distance, Color.red, 2f);
+                     //Debug.DrawRay(startPos, direction * distance, Color.red, 2f);
                      break;
                  }
              }
-    
-             // 중심에서 6방향으로 추가 레이캐스트
-             if (!collision)
+
+            if (collision)
+            {
+                Debug.Log($"배치 불가: 가구가 벽과 충돌했습니다. 위치: {gridPosition}");
+                Destroy(tempObject);
+                return false;
+            }
+
+            // 중심에서 6방향으로 추가 레이캐스트
+            if (!collision)
              {
                  Vector3[] directions = new Vector3[] 
                  {
@@ -712,7 +745,8 @@ public class PlacementSystem : MonoBehaviour
                 
                      if (Physics.Raycast(colliderCenter, dir, distance, wallLayerMask))
                      {
-                         collision = true;
+                        Debug.Log("456789101112");
+                        collision = true;
                          Debug.DrawRay(colliderCenter, dir * distance, Color.red, 2f);
                          break;
                      }
@@ -726,17 +760,17 @@ public class PlacementSystem : MonoBehaviour
                  Destroy(tempObject);
                  return false;
              }
-        
-             // 오버랩박스로 마지막 확인 (더 작은 크기로)
-             Collider[] hitColliders = Physics.OverlapBox(
-                 colliderCenter,         
-                 colliderSize / 4f,     // 더 작은 영역으로 검사
-                 rotation,               
-                 wallLayerMask          
-             );
-    
+
+            // 오버랩박스로 마지막 확인 (더 작은 크기로)
+            Collider[] hitColliders = Physics.OverlapBox(
+                colliderCenter,
+                colliderSize / 4f,     // 더 작은 영역으로 검사
+                rotation,
+                wallLayerMask
+            );
+
              // 충돌 감지 시 로그 출력 및 배치 금지
-             if (hitColliders.Length > 0)
+            if (hitColliders.Length > 0)
              {
                  //Debug.Log($"배치 불가: 가구가 벽과 충돌했습니다. 벽 개수: {hitColliders.Length}");
                  foreach (Collider hit in hitColliders)
@@ -746,9 +780,10 @@ public class PlacementSystem : MonoBehaviour
                  Destroy(tempObject);
                  return false;
              }
-    
-             // 임시 오브젝트 제거
-             Destroy(tempObject);
+            */
+
+            // 임시 오브젝트 제거
+            Destroy(tempObject);
         
              // GridData 기반 충돌 체크 - 다른 가구와의 충돌 확인
              if (!furnitureData.CanPlaceObjectAt(gridPosition, objectToPlace.Size, rotation, grid, placingWall))
@@ -824,7 +859,8 @@ public class PlacementSystem : MonoBehaviour
             foreach (Vector3 origin in raycastOrigins)
             {
                 Debug.DrawRay(origin, raycastDirection * distance, Color.yellow, 2f);
-                if (Physics.Raycast(origin, raycastDirection, distance, furnitureLayerMask))
+                //if (Physics.Raycast(origin, raycastDirection, distance, furnitureLayerMask))
+                if (Physics.Raycast(origin, raycastDirection, distance, furnitureLayerMask)) // 수정된 코드
                 {
                     collision = true;
                     Debug.DrawRay(origin, raycastDirection * distance, Color.red, 2f);
@@ -853,9 +889,41 @@ public class PlacementSystem : MonoBehaviour
     
         // 모든 검사를 통과하면 배치 가능
         return true;
-    }   
-    
+    }
+
     #endregion
+
+    /// <summary>
+    /// Gizmos.DrawWireCube와 유사하지만, 회전을 지원하고 게임 뷰에서도 보이도록 Debug.DrawLine을 사용합니다.
+    /// </summary>
+    void DrawWireCube(Vector3 center, Vector3 size, Quaternion rotation, Color color, float duration)
+    {
+        Matrix4x4 matrix = Matrix4x4.TRS(center, rotation, size);
+
+        Vector3 p0 = matrix.MultiplyPoint3x4(new Vector3(-0.5f, -0.5f, -0.5f));
+        Vector3 p1 = matrix.MultiplyPoint3x4(new Vector3(0.5f, -0.5f, -0.5f));
+        Vector3 p2 = matrix.MultiplyPoint3x4(new Vector3(0.5f, -0.5f, 0.5f));
+        Vector3 p3 = matrix.MultiplyPoint3x4(new Vector3(-0.5f, -0.5f, 0.5f));
+        Vector3 p4 = matrix.MultiplyPoint3x4(new Vector3(-0.5f, 0.5f, -0.5f));
+        Vector3 p5 = matrix.MultiplyPoint3x4(new Vector3(0.5f, 0.5f, -0.5f));
+        Vector3 p6 = matrix.MultiplyPoint3x4(new Vector3(0.5f, 0.5f, 0.5f));
+        Vector3 p7 = matrix.MultiplyPoint3x4(new Vector3(-0.5f, 0.5f, 0.5f));
+
+        Debug.DrawLine(p0, p1, color, duration);
+        Debug.DrawLine(p1, p2, color, duration);
+        Debug.DrawLine(p2, p3, color, duration);
+        Debug.DrawLine(p3, p0, color, duration);
+
+        Debug.DrawLine(p4, p5, color, duration);
+        Debug.DrawLine(p5, p6, color, duration);
+        Debug.DrawLine(p6, p7, color, duration);
+        Debug.DrawLine(p7, p4, color, duration);
+
+        Debug.DrawLine(p0, p4, color, duration);
+        Debug.DrawLine(p1, p5, color, duration);
+        Debug.DrawLine(p2, p6, color, duration);
+        Debug.DrawLine(p3, p7, color, duration);
+    }
 
     #region 건축 종료
     private void StopPlacement()
@@ -1337,7 +1405,7 @@ public class PlacementSystem : MonoBehaviour
         StopPlacement(); // 기존 배치 모드 종료
         inputManager.isDeleteMode = true;
         inputManager.OnClicked += DeleteStructure; // 클릭 시 삭제 함수 호출
-        inputManager.OnExit += StopDeleteMode;
+        //inputManager.OnExit += StopDeleteMode;
         
         mouseIndicator.SetActive(true); // 인디케이터 활성화
 
@@ -1355,7 +1423,7 @@ public class PlacementSystem : MonoBehaviour
 
         inputManager.isDeleteMode = false;
         inputManager.OnClicked -= DeleteStructure;
-        inputManager.OnExit -= StopDeleteMode;
+        //inputManager.OnExit -= StopDeleteMode;
         mouseIndicator.SetActive(false); // 인디케이터 비활성화
         Debug.Log("삭제 모드 종료");
     }

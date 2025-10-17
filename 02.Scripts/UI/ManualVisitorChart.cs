@@ -60,9 +60,10 @@ public class ManualVisitorChart : MonoBehaviour
     private LineRenderer gridRenderer;
     
     // 실시간 데이터 관리
-    private int currentDayRealtimeGold = 0;
-    private int currentDayRealtimeReputation = 0;
-    private int currentDayRealtimeVisitors = 0;
+    //private int currentDayRealtimeGold = 0;
+    //private int currentDayRealtimeReputation = 0;
+    //private int currentDayRealtimeVisitors = 0;
+    
     private int currentDay = 1; // 게임 시작 시 1일차
     
     // 상태 관리

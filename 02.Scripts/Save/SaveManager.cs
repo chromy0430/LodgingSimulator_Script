@@ -462,8 +462,70 @@ public class SaveManager : MonoBehaviour
             Debug.LogError("필수 데이터가 null입니다.");
             return;
         }
+        gridData.placedObjects.Clear();
 
-        gridData.placedObjects = new Dictionary<Vector3Int, List<PlacementData>>();
+        var processedObjectIndices = new HashSet<int>();
+
+        foreach (var entry in saveData.placedObjects)
+        {
+            if (entry.value == null || entry.value.Count == 0)
+            {
+                Debug.LogWarning($"GridEntry's value is null or empty. key: {entry.key}");
+                continue;
+            }
+
+            // An object occupies multiple grid cells, but the PlacementData is the same.
+            // We only need to process it once based on its unique PlacedObjectIndex.
+            var placementData = entry.value[0];
+
+            // [BUG FIX] Check if this object's index has already been processed. If so, skip.
+            if (processedObjectIndices.Contains(placementData.PlacedObjectIndex))
+            {
+                continue;
+            }
+
+            ObjectData objectData = PlacementSystem.Instance.GetDatabase().GetObjectData(placementData.ID);
+            if (objectData != null)
+            {
+                Vector3 worldPosition = PlacementSystem.Instance.grid.GetCellCenterWorld(entry.key);
+
+                int floor = ConvertGridYToFloorNumber(entry.key.y);
+                float floorHeight = GetFloorHeight(floor);
+                worldPosition.y = floorHeight;
+
+                // Place the object and get its new index in the runtime list.
+                int newIndex = ObjectPlacer.Instance.PlaceObject(objectData.Prefab, worldPosition, placementData.Rotation, floor);
+
+                if (newIndex != -1)
+                {
+                    // [BUG FIX] Add the original (saved) index to the processed set to prevent duplicates.
+                    processedObjectIndices.Add(placementData.PlacedObjectIndex);
+
+                    // Re-calculate all grid positions this object occupies.
+                    List<Vector3Int> occupiedPositions = PlacementSystem.Instance.floorData.CalculatePosition(entry.key, objectData.Size, placementData.Rotation, PlacementSystem.Instance.grid);
+
+                    // Create new PlacementData with the NEW index from ObjectPlacer.
+                    PlacementData dataToAdd = new PlacementData(occupiedPositions, placementData.ID, newIndex, placementData.KindIndex, placementData.Rotation);
+
+                    // Add the new PlacementData to the dictionary for all occupied positions.
+                    foreach (var pos in occupiedPositions)
+                    {
+                        if (!gridData.placedObjects.ContainsKey(pos))
+                        {
+                            gridData.placedObjects[pos] = new List<PlacementData>();
+                        }
+                        gridData.placedObjects[pos].Add(dataToAdd);
+                    }
+                    Debug.Log($"Load Success - New Index: {newIndex}, ID: {placementData.ID}, Pos: {entry.key}");
+                }
+                else
+                {
+                    Debug.LogError($"Load Fail - key: {entry.key}, ID: {placementData.ID}");
+                }
+            }
+        }
+
+        /*gridData.placedObjects = new Dictionary<Vector3Int, List<PlacementData>>();
         var processedObjects = new HashSet<int>();
 
         foreach (var entry in saveData.placedObjects)
@@ -531,7 +593,7 @@ public class SaveManager : MonoBehaviour
                     Debug.LogError($"로드 실패 - key: {entry.key}, ID: {placementData.ID}");
                 }
             }
-        }
+        }*/
     }
 
     private void ClearPlacedObjects()

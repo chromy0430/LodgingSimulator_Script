@@ -13,14 +13,35 @@ MonoBehaviour:
   m_Name: FacilityPriceConfig
   m_EditorClassIdentifier: 
   sunbedBasePrice: 50
-  sunbedReputation: 5
+  sunbedReputation: 10
   sunbedInRoomIsFree: 0
-  restaurantOrderPrice: 50
-  restaurantReputation: 5
-  healthFacilityPrice: 50
-  healthFacilityReputation: 5
+  restaurantOrderPrice: 100
+  restaurantReputation: 10
+  healthFacilityPrice: 100
+  healthFacilityReputation: 30
   healthFacilityIsFree: 0
-  bathtubPrice: 0
-  bathtubReputation: 0
+  bathtubPrice: 60
+  bathtubReputation: 10
   bathtubIsFree: 1
-  showPriceLogs: 0
+  weddingFacilityPrice: 100
+  weddingFacilityReputation: 60
+  weddingFacilityIsFree: 0
+  loungeFacilityPrice: 100
+  loungeFacilityReputation: 80
+  loungeFacilityIsFree: 0
+  hallFacilityPrice: 120
+  hallFacilityReputation: 80
+  hallFacilityIsFree: 0
+  saunaFacilityPrice: 120
+  saunaFacilityReputation: 80
+  saunaFacilityIsFree: 0
+  cafeFacilityPrice: 100
+  cafeFacilityReputation: 80
+  cafeFacilityIsFree: 0
+  bathFacilityPrice: 100
+  bathFacilityReputation: 50
+  bathFacilityIsFree: 0
+  hosFacilityPrice: 300
+  hosFacilityReputation: 200
+  hosFacilityIsFree: 0
+  showPriceLogs: 1

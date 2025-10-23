@@ -47,6 +47,7 @@ public class InputManager : MonoBehaviour
     public GameObject HiringUI;
     public GameObject StatisticUI;
     public Button SettingBtn;
+    public GameObject PreExitUI;
 
     [Header("언어별 설정 이미지")]
     public GameObject settingImageKO; // 한국어 이미지
@@ -177,6 +178,9 @@ public class InputManager : MonoBehaviour
     private void OnOffSettingUI()
     {
         if (StatisticUI.activeSelf) StatisticUI.SetActive(false);
+        if (QuestUI.activeSelf) QuestUI.SetActive(false);
+        if (HiringUI.activeSelf) HiringUI.SetActive(false);
+        if (PreExitUI.activeSelf) PreExitUI.SetActive(false);
 
         // UI가 비활성화 상태일 때 -> 열기
         if (!SettingUI.activeSelf)

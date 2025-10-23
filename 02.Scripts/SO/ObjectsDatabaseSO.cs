@@ -15,6 +15,8 @@ public class ObjectsDatabaseSO : ScriptableObject
     
     public void InitializeDictionary()
     {
+        if (objectDataDict != null) return;
+
         objectDataDict = new Dictionary<int, ObjectData>();
         foreach (var data in objectsData)
         {
@@ -24,6 +26,12 @@ public class ObjectsDatabaseSO : ScriptableObject
     
     public ObjectData GetObjectData(int id)
     {
+        if (objectDataDict == null)
+        {
+            Debug.Log("ObjectsDatabaseSO: 딕셔너리가 초기화되지 않아 지금 초기화합니다.");
+            InitializeDictionary();
+        }
+
         return objectDataDict.TryGetValue(id, out var data) ? data : null;
     }
 }

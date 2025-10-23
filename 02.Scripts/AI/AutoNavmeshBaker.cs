@@ -50,6 +50,7 @@ public class AutoNavMeshBaker : MonoBehaviour
     private Dictionary<string, List<GameObject>> tagObjectCache = new Dictionary<string, List<GameObject>>();
     private bool isInitialized = false;
     private bool isBaking = false;
+    private bool navMeshRebuildQueued = false;
 
     void Start()
     {
@@ -144,8 +145,12 @@ public class AutoNavMeshBaker : MonoBehaviour
         return false;
     }
     
+    // void  IEnumerator BuildNavMesh() -> IEnumerator BuildNavMeshAsync()
     IEnumerator BuildNavMeshAsync()
     {
+        isBaking = true;
+        navMeshRebuildQueued = false;
+
         if (_navsurface == null)
         {
             yield break;
@@ -166,6 +171,7 @@ public class AutoNavMeshBaker : MonoBehaviour
 
             while (!operation.isDone)
             {
+                //yield return new WaitForSecondsRealtime(0.1f);
                 yield return null;
             }
         }
@@ -178,6 +184,13 @@ public class AutoNavMeshBaker : MonoBehaviour
         }
 
         isBaking = false; // 베이킹 완료 플래그
+
+        if (navMeshRebuildQueued)
+        {
+            if (showDebugLogs) { Debug.Log("Starting queued NavMesh bake..."); }
+            // navMeshRebuildQueued = false; // -> 어차피 다음 코루틴 시작 시 초기화됨
+            StartCoroutine(BuildNavMeshAsync()); // 대기 중이던 요청으로 다시 베이킹 시작
+        }
         // *** 수정된 부분 끝 ***        
 
         //isBaking = true;
@@ -206,15 +219,13 @@ public class AutoNavMeshBaker : MonoBehaviour
     // 수동으로 NavMesh를 다시 빌드하는 공개 메서드
     public void RebuildNavMesh()
     {
-        // *** 수정된 부분 시작 ***
-        // 이미 베이킹 중이면 재요청 무시
         if (isBaking)
         {
+            navMeshRebuildQueued = true;
             if (showDebugLogs) { }
             return;
         }
         StartCoroutine(BuildNavMeshAsync());
-        // *** 수정된 부분 끝 ***
     }
 
         // 수동으로 NavMesh를 다시 빌드하는 공개 메서드

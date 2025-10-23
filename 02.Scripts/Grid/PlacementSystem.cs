@@ -1,4 +1,5 @@
 using JY;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -136,6 +137,7 @@ public class PlacementSystem : MonoBehaviour
             {
                 navMeshNeedsRebuild = false; // 플래그를 다시 false로
                 navMeshBaker?.RebuildNavMesh(); // 타이머가 끝나면 딱 한 번만 실행
+                Debug.Log("-------------------------베이킹 성공--------------------");
             }
         }
     }

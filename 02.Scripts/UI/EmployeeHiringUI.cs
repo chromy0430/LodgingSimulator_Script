@@ -383,7 +383,7 @@ namespace JY
                 }
                 else if (!canHireAtPosition)
                 {
-                    buttonText.text = "위치 제한";
+                    buttonText.text = "고용 불가";
                 }
                 else
                 {

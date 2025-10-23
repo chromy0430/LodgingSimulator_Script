@@ -1,6 +1,7 @@
 using DG.Tweening;
 using System;
 using System.Collections.Generic;
+using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Localization;
@@ -86,6 +87,7 @@ namespace JY
         // 캐싱 변수 (성능 최적화)
         private int lastReputation = -1; // 마지막으로 표시된 명성도
         private string lastFormattedReputation = ""; // 마지막으로 포맷된 명성도 문자열
+        private StringBuilder sb;
 
         private void Awake()
         {
@@ -101,6 +103,7 @@ namespace JY
         }
         private void Start()
         {
+            sb = new StringBuilder();
             if (gradeChangePanel != null)
             {
                 gradeChangePanel.SetActive(false);
@@ -361,9 +364,12 @@ namespace JY
                     lastFormattedReputation = FormatReputation(currentReputation);
                 }
 
-                string grade = GetCurrentGrade();
-                currentGradeText.text = grade;
-                reputationText.text = string.Format(textFormat, lastFormattedReputation, grade);
+                //string grade = GetCurrentGrade();
+                var a = sb.Append(GetCurrentGrade());
+                //currentGradeText.text = grade;
+                currentGradeText.text = a.ToString();
+                sb.Clear();
+                reputationText.text = string.Format(textFormat, lastFormattedReputation, a);
             }
         }
 

@@ -97,7 +97,7 @@ namespace JY
         
         [Header("선베드 방 설정")]
         [Tooltip("선베드 방 인식 기능 활성화")]
-        [SerializeField] private bool enableSunbedRooms = true;
+        [SerializeField] private bool enableSunbedRooms = false; // ✅ 선베드는 방이 아니라 오브젝트!
         
         [Tooltip("선베드 방의 고정 가격 (원)")]
         [Range(0f, 10000f)]
@@ -2293,7 +2293,12 @@ namespace JY
                 
             room.gameObject = new GameObject(roomName);
             room.gameObject.transform.position = room.center;
-            room.gameObject.tag = "Room";
+            
+            // ✅ 선베드는 방이 아니므로 Room 태그를 달지 않음!
+            if (!room.isSunbedRoom)
+            {
+                room.gameObject.tag = "Room";
+            }
 
             // RoomManager를 통해 방 등록 (Sunbed 방 설정 포함)
             RoomManager roomManager = FindFirstObjectByType<RoomManager>();

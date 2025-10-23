@@ -1,4 +1,3 @@
-using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -36,16 +35,7 @@ public class EscUI : MonoBehaviour
     private void Btn_Save()
     {
         SaveManager.Instance.SaveGame();
-        StartCoroutine(CheckSave());
-    }
-
-    private IEnumerator CheckSave()
-    {
-        m_SaveCheckingUI.SetActive(true);
-
-        yield return new WaitForSecondsRealtime(1f);
-
-        m_SaveCheckingUI.SetActive(false);
+        UIHelper.ShowAndHide(this, m_SaveCheckingUI, 1f);        
     }
 
     private void Btn_Setting()

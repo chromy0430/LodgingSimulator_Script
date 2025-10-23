@@ -26,6 +26,6 @@ MonoBehaviour:
   completionType: 0
   completionTargetID: 0
   completionAmount: 0
-  rewardType: 0
-  rewardAmount: 100
+  rewardType: 1
+  rewardAmount: 200
   timeLimitInMinutes: 0

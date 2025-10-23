@@ -323,6 +323,99 @@ namespace JY
         }
 
         /// <summary>
+        /// 활성화된 모든 AI GameObject 목록 반환 (저장/로드용)
+        /// </summary>
+        public List<GameObject> GetActiveAIs()
+        {
+            return activeAIs != null ? new List<GameObject>(activeAIs) : new List<GameObject>();
+        }
+
+        /// <summary>
+        /// 모든 AI (활성화 + 비활성화) 반환 (저장/로드용)
+        /// </summary>
+        public List<GameObject> GetAllAIs()
+        {
+            List<GameObject> allAIs = new List<GameObject>();
+            
+            // 활성화된 AI 추가
+            if (activeAIs != null)
+            {
+                allAIs.AddRange(activeAIs);
+            }
+            
+            // 비활성화된 AI 추가 (풀에 있는 AI)
+            if (aiPool != null)
+            {
+                allAIs.AddRange(aiPool);
+            }
+            
+            return allAIs;
+        }
+
+        /// <summary>
+        /// 저장된 데이터로부터 AI를 활성화하고 복원 (로드 전용)
+        /// </summary>
+        public bool RestoreAI(GameObject aiObject)
+        {
+            if (aiObject == null) return false;
+            
+            // 풀에서 제거
+            if (aiPool != null && aiPool.Contains(aiObject))
+            {
+                // Queue를 임시 리스트로 변환
+                List<GameObject> tempList = new List<GameObject>(aiPool);
+                tempList.Remove(aiObject);
+                
+                // Queue 재생성
+                aiPool.Clear();
+                foreach (var ai in tempList)
+                {
+                    aiPool.Enqueue(ai);
+                }
+            }
+            
+            // AI 활성화
+            if (!aiObject.activeSelf)
+            {
+                aiObject.SetActive(true);
+            }
+            
+            // activeAIs에 추가 (중복 체크)
+            if (activeAIs != null && !activeAIs.Contains(aiObject))
+            {
+                activeAIs.Add(aiObject);
+                DebugLog($"{aiObject.name} 복원됨 (현재 활성화된 AI: {activeAIs.Count}개)", true);
+            }
+            
+            // UI 업데이트 알림
+            NotifyAICountChanged();
+            
+            return true;
+        }
+
+        /// <summary>
+        /// 모든 활성 AI를 비활성화하고 풀로 반환 (로드 전 초기화용)
+        /// </summary>
+        public void DeactivateAllAIs()
+        {
+            if (activeAIs == null) return;
+            
+            List<GameObject> tempList = new List<GameObject>(activeAIs);
+            foreach (var ai in tempList)
+            {
+                if (ai != null)
+                {
+                    ai.SetActive(false);
+                    activeAIs.Remove(ai);
+                    aiPool.Enqueue(ai);
+                }
+            }
+            
+            DebugLog($"모든 AI 비활성화 완료 (풀로 반환)", true);
+            NotifyAICountChanged();
+        }
+
+        /// <summary>
         /// 다음 스폰 시간 반환 (분 단위) - 하루 기준으로만 반환
         /// </summary>
         public float GetNextSpawnTime()

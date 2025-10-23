@@ -135,16 +135,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   employeeName: "\uC8FC\uBC29 \uC9C1\uC6D0"
   workPosition: {fileID: 0}
-  waitingPosition: {fileID: 0}
   useManualPositions: 1
   moveSpeed: 7
   animator: {fileID: 6845517623173971940}
   workAnimationTrigger: Working
-  idleAnimationTrigger: Idle
   moveAnimationTrigger: Moving
+  wokObject: {fileID: 5270740594600188462}
+  plateObject: {fileID: 7767988180091570116}
   isHired: 0
   showDebugLogs: 1
-  showImportantLogsOnly: 0
+  showImportantLogsOnly: 1
 --- !u!95 &6845517623173971940
 Animator:
   serializedVersion: 7
@@ -1836,6 +1836,11 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 1020577217754281618, guid: 13570266ddf29b24394b8db2d94de1d3, type: 3}
   m_PrefabInstance: {fileID: 2199348879123291878}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &5270740594600188462 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6314264939375363272, guid: 13570266ddf29b24394b8db2d94de1d3, type: 3}
+  m_PrefabInstance: {fileID: 2199348879123291878}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &2321938398858734726
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1908,5 +1913,10 @@ PrefabInstance:
 --- !u!4 &7766118864100229809 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5476347864809991735, guid: 5b53236b600cb4349b2b6dad12444b5a, type: 3}
+  m_PrefabInstance: {fileID: 2321938398858734726}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &7767988180091570116 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5473103609574648642, guid: 5b53236b600cb4349b2b6dad12444b5a, type: 3}
   m_PrefabInstance: {fileID: 2321938398858734726}
   m_PrefabAsset: {fileID: 0}

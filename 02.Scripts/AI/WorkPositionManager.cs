@@ -501,8 +501,21 @@ namespace JY
         /// </summary>
         public void OnFurnitureePlaced(GameObject placedObject, Vector3 position)
         {
-            // 가구 타입에 따라 작업 위치 생성
+            // ✅ 주방 가구는 KitchenDetector가 이미 관리하므로 여기서는 무시
             string furnitureName = placedObject.name.ToLower();
+            
+            // 주방 관련 가구는 KitchenDetector가 처리
+            if (furnitureName.Contains("kitchen") || 
+                furnitureName.Contains("stove") || 
+                furnitureName.Contains("counter") ||
+                furnitureName.Contains("인덕션") ||
+                furnitureName.Contains("가스"))
+            {
+                DebugLog($"주방 가구 감지: {placedObject.name} - KitchenDetector에서 처리", true);
+                return;
+            }
+            
+            // 가구 타입에 따라 작업 위치 생성
             string jobType = GetJobTypeFromFurniture(furnitureName);
             
             if (!string.IsNullOrEmpty(jobType))

@@ -72,15 +72,19 @@ namespace JY
         [Tooltip("작업 애니메이션 트리거")]
         public string workAnimationTrigger = "Work";
         
-        [Tooltip("대기 애니메이션 트리거")]
-        public string idleAnimationTrigger = "Idle";
-        
         [Tooltip("이동 애니메이션 트리거")]
         public string moveAnimationTrigger = "Move";
         
+        [Header("요리 도구")]
+        [Tooltip("웍 오브젝트 (요리 시 활성화)")]
+        public GameObject wokObject;
+        
+        [Tooltip("접시 오브젝트 (완성된 음식, 복귀 시 활성화)")]
+        public GameObject plateObject;
+        
         [Header("고용 상태")]
-        [Tooltip("현재 고용 여부")]
-        public bool isHired = false;
+        [Tooltip("현재 고용 여부 (HireEmployee() 메서드로만 설정 가능)")]
+        [SerializeField] private bool isHired = false;
         
         [Tooltip("고용 시작일")]
         [SerializeField] private DateTime hireDate = DateTime.MinValue;
@@ -216,28 +220,35 @@ namespace JY
         /// </summary>
         public void StartOrderProcessing()
         {
-            DebugLog($"🔄 StartOrderProcessing 호출됨 - 처리중: {_isProcessingOrder}, 고용됨: {isHired}, 근무시간: {IsWorkTime}", true);
-            DebugLog($"⏰ 현재시간: {(timeSystem != null ? timeSystem.CurrentHour : -1)}시, 근무시간: {workStartHour}~{workEndHour}시", true);
+            DebugLog($"StartOrderProcessing 호출됨 - 처리중: {_isProcessingOrder}, 고용됨: {isHired}, 근무시간: {IsWorkTime}, 작업중: {isWorking}", true);
+            DebugLog($"현재시간: {(timeSystem != null ? timeSystem.CurrentHour : -1)}시, 근무시간: {workStartHour}~{workEndHour}시", true);
             
             if (_isProcessingOrder)
             {
-                DebugLog("❌ 이미 다른 주문을 처리 중입니다.", true);
+                DebugLog("이미 다른 주문을 처리 중입니다.", true);
                 return;
             }
             
             if (!isHired)
             {
-                DebugLog("❌ 고용되지 않은 직원입니다.", true);
+                DebugLog("고용되지 않은 직원입니다.", true);
                 return;
             }
             
             if (!IsWorkTime)
             {
-                DebugLog("❌ 근무시간이 아닙니다.", true);
+                DebugLog("근무시간이 아닙니다.", true);
                 return;
             }
             
-            DebugLog("✅ 주문 처리 시작!", true);
+            // 작업 위치에 도착했는지 확인 (중요!)
+            if (!isWorking)
+            {
+                DebugLog("아직 작업 위치(WorkPosition_Kitchen)에 도착하지 않았습니다. 주문 불가!", true);
+                return;
+            }
+            
+            DebugLog("주문 처리 시작!", true);
             _isProcessingOrder = true;
             
             // 기존 코루틴 정리
@@ -254,11 +265,10 @@ namespace JY
         /// </summary>
         private IEnumerator ProcessOrderCoroutine()
         {
-            // 1. 주문 받기 (3초 대기) - 작업 위치에서 대기 애니메이션
+            // 1. 주문 받기 (3초 대기) - 작업 위치에서 대기
             SetState(EmployeeState.ReceivingOrder);
-            CleanUpAnimation();
-            PlayAnimation(idleAnimationTrigger); // 기본 대기 애니메이션
-            DebugLog("📋 주문 받는 중...", true);
+            CleanUpAnimation(); // 모든 애니메이션 끄기 → 자동으로 Idle
+            DebugLog("주문 받는 중...", true);
             yield return new WaitForSeconds(3f);
             
             // 2. Gas 위치 찾기 및 이동
@@ -280,19 +290,37 @@ namespace JY
                 // 인덕션의 위치와 회전값으로 정확히 맞추기
                 transform.position = gasPosition.position;
                 transform.rotation = gasPosition.rotation;
-                DebugLog($"👨‍🍳 인덕션 위치로 이동 완료 - 위치: {gasPosition.position}, 회전: {gasPosition.rotation.eulerAngles}", true);
+                DebugLog($"인덕션 위치로 이동 완료 - 위치: {gasPosition.position}, 회전: {gasPosition.rotation.eulerAngles}", true);
+                
+                // 요리 시작 - 웍 오브젝트 활성화
+                if (wokObject != null)
+                {
+                    wokObject.SetActive(true);
+                    DebugLog("🥘 웍 오브젝트 활성화", true);
+                }
                 
                 // 요리 애니메이션 재생
                 CleanUpAnimation();
                 PlayAnimationBool(workAnimationTrigger, true);
-                DebugLog("👨‍🍳 요리 중...", true);
+                DebugLog("요리 중...", true);
                 yield return new WaitForSeconds(3f);
                 
-                // 요리 애니메이션 종료
+                // 요리 종료 - 웍 비활성화, 접시 활성화
                 PlayAnimationBool(workAnimationTrigger, false);
+                if (wokObject != null)
+                {
+                    wokObject.SetActive(false);
+                    DebugLog("🥘 웍 오브젝트 비활성화", true);
+                }
+                
+                if (plateObject != null)
+                {
+                    plateObject.SetActive(true);
+                    DebugLog("접시 오브젝트 활성화 (완성된 음식)", true);
+                }
 
                 // 4. 원래 작업 위치로 복귀
-                DebugLog("🏃‍♂️ 작업 위치로 복귀", true);
+                DebugLog("작업 위치로 복귀 (접시 들고)", true);
                 CleanUpAnimation();
                 SetState(EmployeeState.Moving);
                 MoveToPosition(workPosition);
@@ -308,19 +336,25 @@ namespace JY
                 {
                     transform.position = workPosition.position;
                     transform.rotation = workPosition.rotation;
-                    DebugLog($"✅ 작업 위치 복귀 완료 - 위치: {workPosition.position}, 회전: {workPosition.rotation.eulerAngles}", true);
+                    DebugLog($"작업 위치 복귀 완료 - 위치: {workPosition.position}, 회전: {workPosition.rotation.eulerAngles}", true);
                 }
                 
-                // 기본 대기 애니메이션으로 전환
-                CleanUpAnimation();
+                // 접시 비활성화 (음식 전달 완료)
+                if (plateObject != null)
+                {
+                    plateObject.SetActive(false);
+                    DebugLog("접시 오브젝트 비활성화 (음식 전달 완료)", true);
+                }
+                
+                // 대기 상태로 전환
+                CleanUpAnimation(); // 모든 애니메이션 끄기 → 자동으로 Idle
                 SetState(EmployeeState.Working);
-                PlayAnimation(idleAnimationTrigger);
             }
             else
             {
                 DebugLog("❌ 인덕션을 찾을 수 없습니다!", true);
                 SetState(EmployeeState.Working);
-                PlayAnimation(idleAnimationTrigger);
+                CleanUpAnimation(); // 모든 애니메이션 끄기 → 자동으로 Idle
             }
             
             _isProcessingOrder = false;
@@ -339,41 +373,168 @@ namespace JY
         /// </summary>
         private bool FindGasPosition()
         {
-            // 현재 위치가 속한 주방 찾기
+            DebugLog($"🔍 FindGasPosition 시작 - assignedKitchen: {(assignedKitchen != null ? assignedKitchen.name : "null")}, 현재 위치: {transform.position}", true);
+            
+            // 1. 먼저 배정된 주방에서 인덕션 찾기 (assignedKitchen 사용)
+            if (assignedKitchen != null)
+            {
+                DebugLog($"✅ assignedKitchen 존재: {assignedKitchen.name}", true);
+                
+                KitchenComponent kitchenComp = assignedKitchen.GetComponent<KitchenComponent>();
+                if (kitchenComp != null)
+                {
+                    DebugLog($"✅ KitchenComponent 발견", true);
+                    
+                    // 주방 범위 정보 출력
+                    if (kitchenComp.kitchenInfo != null)
+                    {
+                        Bounds bounds = kitchenComp.kitchenInfo.bounds;
+                        DebugLog($"📦 주방 Bounds - Center: {bounds.center}, Size: {bounds.size}, Min: {bounds.min}, Max: {bounds.max}", true);
+                    }
+                    
+                    // 배정된 주방 범위 내의 "WorkPosition_Gas" 태그 찾기
+                    GameObject[] gasObjects = GameObject.FindGameObjectsWithTag("WorkPosition_Gas");
+                    DebugLog($"🔍 WorkPosition_Gas 태그 오브젝트 발견: {gasObjects.Length}개", true);
+                    
+                    Transform closestGas = null;
+                    float closestDistance = float.MaxValue;
+                    
+                    foreach (GameObject gasObj in gasObjects)
+                    {
+                        if (gasObj == null) continue;
+                        
+                        Vector3 gasPos = gasObj.transform.position;
+                        bool isInRange = kitchenComp.ContainsPosition(gasPos);
+                        
+                        // 거리 계산 (디버그용)
+                        float distanceToKitchen = Vector3.Distance(gasPos, assignedKitchen.transform.position);
+                        
+                        DebugLog($"  🔍 인덕션: {gasObj.name}", true);
+                        DebugLog($"     위치: {gasPos}, 주방과 거리: {distanceToKitchen:F1}m", true);
+                        DebugLog($"     주방 범위 내부: {isInRange}", true);
+                        
+                        // 배정된 주방 범위 내에 있는지 확인
+                        if (isInRange)
+                        {
+                            float distance = Vector3.Distance(transform.position, gasObj.transform.position);
+                            if (distance < closestDistance)
+                            {
+                                closestDistance = distance;
+                                closestGas = gasObj.transform;
+                            }
+                        }
+                    }
+                    
+                    if (closestGas != null)
+                    {
+                        gasPosition = closestGas;
+                        DebugLog($"🔥 인덕션 발견 (assignedKitchen): {closestGas.name} (위치: {closestGas.position}, 회전: {closestGas.rotation.eulerAngles})", true);
+                        return true;
+                    }
+                    else
+                    {
+                        DebugLog($"❌ 배정된 주방({assignedKitchen.name}) 내에 WorkPosition_Gas 태그를 가진 인덕션을 찾을 수 없습니다.", true);
+                    }
+                }
+                else
+                {
+                    DebugLog($"❌ assignedKitchen에 KitchenComponent가 없습니다!", true);
+                }
+            }
+            else
+            {
+                DebugLog($"⚠️ assignedKitchen이 null입니다. 현재 위치 기반 검색으로 fallback...", true);
+            }
+            
+            // 2. assignedKitchen이 없으면 현재 위치 기반으로 찾기 (fallback)
+            DebugLog($"🔍 Fallback: 현재 위치 기반으로 주방 찾기...", true);
             KitchenComponent currentKitchen = GetCurrentKitchen();
             if (currentKitchen == null)
             {
-                DebugLog("⚠️ 현재 주방을 찾을 수 없습니다.", true);
+                DebugLog("❌ 현재 주방을 찾을 수 없습니다. (GetCurrentKitchen 실패)", true);
+                DebugLog($"  - KitchenDetector.Instance: {(KitchenDetector.Instance != null ? "존재" : "null")}", true);
+                if (KitchenDetector.Instance != null)
+                {
+                    var detectedKitchens = KitchenDetector.Instance.GetDetectedKitchens();
+                    DebugLog($"  - 감지된 주방 수: {detectedKitchens.Count}개", true);
+                }
                 return false;
             }
             
-            // 해당 주방 범위 내의 WorkPosition_Gas 태그 찾기
-            GameObject[] gasObjects = GameObject.FindGameObjectsWithTag("WorkPosition_Gas");
-            Transform closestGas = null;
-            float closestDistance = float.MaxValue;
+            DebugLog($"✅ 현재 주방 발견: {currentKitchen.gameObject.name}", true);
             
-            foreach (GameObject gasObj in gasObjects)
+            // 주방 범위 정보 출력
+            if (currentKitchen.kitchenInfo != null)
             {
-                // 같은 주방 범위 내에 있는지 확인
-                if (currentKitchen.ContainsPosition(gasObj.transform.position))
+                Bounds bounds = currentKitchen.kitchenInfo.bounds;
+                DebugLog($"📦 Fallback 주방 Bounds - Center: {bounds.center}, Size: {bounds.size}", true);
+            }
+            
+            // 현재 주방 범위 내의 WorkPosition_Gas 태그 찾기
+            GameObject[] allGasObjects = GameObject.FindGameObjectsWithTag("WorkPosition_Gas");
+            DebugLog($"🔍 Fallback - WorkPosition_Gas 태그 오브젝트 발견: {allGasObjects.Length}개", true);
+            
+            Transform closestGasInCurrent = null;
+            float closestDistInCurrent = float.MaxValue;
+            
+            foreach (GameObject gasObj in allGasObjects)
+            {
+                if (gasObj == null) continue;
+                
+                Vector3 gasPos = gasObj.transform.position;
+                bool isInRange = currentKitchen.ContainsPosition(gasPos);
+                float distanceToKitchen = Vector3.Distance(gasPos, currentKitchen.transform.position);
+                
+                DebugLog($"  🔍 Fallback 인덕션: {gasObj.name}", true);
+                DebugLog($"     위치: {gasPos}, 주방과 거리: {distanceToKitchen:F1}m", true);
+                DebugLog($"     주방 범위 내부: {isInRange}", true);
+                
+                if (isInRange)
                 {
                     float distance = Vector3.Distance(transform.position, gasObj.transform.position);
-                    if (distance < closestDistance)
+                    if (distance < closestDistInCurrent)
                     {
-                        closestDistance = distance;
-                        closestGas = gasObj.transform;
+                        closestDistInCurrent = distance;
+                        closestGasInCurrent = gasObj.transform;
                     }
                 }
             }
             
-            if (closestGas != null)
+            if (closestGasInCurrent != null)
             {
-                gasPosition = closestGas;
-                DebugLog($"🔥 인덕션 발견: {closestGas.name} (위치: {closestGas.position}, 회전: {closestGas.rotation.eulerAngles})", true);
+                gasPosition = closestGasInCurrent;
+                DebugLog($"🔥 인덕션 발견 (현재 위치): {closestGasInCurrent.name} (거리: {closestDistInCurrent:F1}m)", true);
                 return true;
             }
             
-            DebugLog("❌ 주방 내 인덕션을 찾을 수 없습니다.", true);
+            // ✅ 3. 최후의 수단: 범위 무시하고 가장 가까운 인덕션 사용
+            DebugLog("⚠️ 주방 범위 내에 인덕션을 찾을 수 없습니다. 범위 무시하고 가장 가까운 인덕션 검색...", true);
+            
+            Transform closestGasAnywhere = null;
+            float closestDistanceAnywhere = float.MaxValue;
+            
+            foreach (GameObject gasObj in allGasObjects)
+            {
+                if (gasObj == null) continue;
+                
+                float distance = Vector3.Distance(transform.position, gasObj.transform.position);
+                if (distance < closestDistanceAnywhere)
+                {
+                    closestDistanceAnywhere = distance;
+                    closestGasAnywhere = gasObj.transform;
+                }
+            }
+            
+            if (closestGasAnywhere != null)
+            {
+                gasPosition = closestGasAnywhere;
+                DebugLog($"🔥 인덕션 발견 (범위 무시): {closestGasAnywhere.name} (거리: {closestDistanceAnywhere:F1}m)", true);
+                DebugLog($"⚠️ 주의: 주방 범위를 벗어난 인덕션을 사용 중입니다. 주방 Bounds를 조정하는 것을 권장합니다.", true);
+                return true;
+            }
+            
+            DebugLog("❌ 주방 내 WorkPosition_Gas 태그를 가진 인덕션을 찾을 수 없습니다.", true);
+            DebugLog("🔧 해결방법: 1) 주방에 WorkPosition_Gas 태그를 가진 오브젝트가 있는지 확인 2) 주방 범위(Bounds)가 인덕션을 포함하는지 확인", true);
             return false;
         }
         
@@ -448,10 +609,10 @@ namespace JY
             }
             navAgent.speed = moveSpeed;
             
-            // NavMeshAgent 관성 제거 설정
+            // NavMeshAgent 정확한 위치/회전 설정
             navAgent.acceleration = 100f;        // 가속도 증가 (빠르게 가속)
-            navAgent.angularSpeed = 360f;        // 회전 속도 증가 (빠르게 회전)
-            navAgent.stoppingDistance = 0.1f;    // 정지 거리 감소
+            navAgent.angularSpeed = 360f;        // ✅ 이동 중 자동 회전 (자연스러운 이동)
+            navAgent.stoppingDistance = 0.05f;   // 정지 거리 최소화
             navAgent.autoBraking = true;         // 자동 브레이킹 활성화
             
             // Animator 설정
@@ -791,20 +952,41 @@ namespace JY
         {
             if (navAgent != null && navAgent.remainingDistance < 0.5f && !navAgent.pathPending)
             {
-                // 목적지 도착 후 해당 위치의 방향으로 회전
+                // ✅ 목적지 도착 - 정확한 위치와 회전값 설정 (반동 제거)
                 if (IsWorkTime && workPosition != null)
                 {
-                    // 작업 위치의 방향으로 회전
+                    // 작업 위치로 정확히 이동 및 회전
+                    transform.position = workPosition.position;
                     transform.rotation = workPosition.rotation;
+                    
+                    // NavMeshAgent 완전 정지 (반동 제거)
+                    navAgent.isStopped = true;
+                    navAgent.ResetPath();
+                    
+                    isMoving = false;
                     SetState(EmployeeState.Working);
                 }
                 else if (!IsWorkTime && spawnPoint != null && currentState == EmployeeState.ReturningToSpawn)
                 {
+                    // 스폰 포인트로 정확히 이동 및 회전
+                    transform.position = spawnPoint.position;
+                    transform.rotation = spawnPoint.rotation;
+                    
+                    // NavMeshAgent 완전 정지
+                    navAgent.isStopped = true;
+                    navAgent.ResetPath();
+                    
+                    isMoving = false;
                     // 스폰 포인트 도착 - 디스폰 처리는 HandleReturningToSpawnState에서 처리
-                    // 상태는 그대로 유지
                 }
                 else
                 {
+                    // NavMeshAgent 정지
+                    navAgent.isStopped = true;
+                    navAgent.ResetPath();
+                    
+                    isMoving = false;
+                    
                     // 위치 정보가 없으면 상태만 변경
                     if (IsWorkTime)
                     {
@@ -826,12 +1008,23 @@ namespace JY
             // 작업 위치에 있을 때는 기본 대기 애니메이션 유지
             if (animator != null)
             {
-                // 이동 중이 아니면 대기 애니메이션
-                bool isMoving = navAgent != null && navAgent.velocity.magnitude > 0.1f;
-                if (!isMoving && !_isProcessingOrder)
+                // 이동 중이 아니고 주문 처리 중이 아니면 모든 애니메이션 끄기
+                bool isActuallyMoving = navAgent != null && navAgent.velocity.magnitude > 0.1f;
+                
+                if (!isActuallyMoving && !_isProcessingOrder)
                 {
-                    CleanUpAnimation();
-                    PlayAnimation(idleAnimationTrigger);
+                    // 애니메이션과 오브젝트 완전히 정리
+                    CleanUpAnimation(); // 모든 애니메이션 끄기 → 자동으로 Idle
+                    
+                    // 추가: 혹시 모를 오브젝트 정리
+                    if (wokObject != null && wokObject.activeSelf)
+                    {
+                        wokObject.SetActive(false);
+                    }
+                    if (plateObject != null && plateObject.activeSelf)
+                    {
+                        plateObject.SetActive(false);
+                    }
                 }
             }
             
@@ -969,8 +1162,7 @@ namespace JY
             switch (state)
             {
                 case EmployeeState.Idle:
-                    CleanUpAnimation();
-                    PlayAnimation(idleAnimationTrigger);
+                    CleanUpAnimation(); // 모든 애니메이션 끄기 → 자동으로 Idle
                     break;
                 case EmployeeState.Moving:
                     CleanUpAnimation();
@@ -983,20 +1175,41 @@ namespace JY
                     //PlayAnimation(workAnimationTrigger);
                     break;
                 case EmployeeState.Resting:
-                    CleanUpAnimation();
-                    PlayAnimation(idleAnimationTrigger);
+                    CleanUpAnimation(); // 모든 애니메이션 끄기 → 자동으로 Idle
                     break;
                 case EmployeeState.OffDuty:
-                    CleanUpAnimation();
-                    PlayAnimation(idleAnimationTrigger);
+                    CleanUpAnimation(); // 모든 애니메이션 끄기 → 자동으로 Idle
                     break;
             }
         }
 
         private void CleanUpAnimation()
         {
-            PlayAnimationBool(workAnimationTrigger, false);
-            PlayAnimationBool(moveAnimationTrigger, false);
+            // 모든 애니메이션 Bool 파라미터를 false로 설정
+            if (animator != null)
+            {
+                if (!string.IsNullOrEmpty(workAnimationTrigger))
+                {
+                    animator.SetBool(workAnimationTrigger, false);
+                }
+                if (!string.IsNullOrEmpty(moveAnimationTrigger))
+                {
+                    animator.SetBool(moveAnimationTrigger, false);
+                }
+            }
+            
+            // 요리 도구 오브젝트 비활성화 (확실하게)
+            if (wokObject != null && wokObject.activeSelf)
+            {
+                wokObject.SetActive(false);
+                DebugLog("🥘 웍 오브젝트 비활성화 (정리)", showImportantLogsOnly);
+            }
+            
+            if (plateObject != null && plateObject.activeSelf)
+            {
+                plateObject.SetActive(false);
+                DebugLog("🍽️ 접시 오브젝트 비활성화 (정리)", showImportantLogsOnly);
+            }
         }
 
         #endregion
@@ -1012,6 +1225,9 @@ namespace JY
             
             currentTarget = target;
             Vector3 targetPosition = target.position;
+            
+            // ✅ NavMeshAgent 재시작 (이전에 정지되었을 수 있음)
+            navAgent.isStopped = false;
             
             // 정확히 설정한 위치로 이동 (보정 없음)
             navAgent.SetDestination(targetPosition);
@@ -1042,8 +1258,7 @@ namespace JY
             // 주문 받는 중 - 코루틴에서 처리하므로 여기서는 애니메이션만 확인
             if (animator != null)
             {
-                CleanUpAnimation();
-                PlayAnimation(idleAnimationTrigger);
+                CleanUpAnimation(); // 모든 애니메이션 끄기 → 자동으로 Idle
             }
         }
         
@@ -1265,6 +1480,8 @@ namespace JY
             if (!showDebugLogs) return;
             
             if (showImportantLogsOnly && !isImportant) return;
+            
+            Debug.Log($"[AIEmployee] {message}");
         }
         
         #endregion

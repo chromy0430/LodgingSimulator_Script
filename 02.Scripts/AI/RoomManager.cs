@@ -28,6 +28,9 @@ namespace JY
         [Tooltip("오늘의 방 요금 배율")]
         public float priceMultiplier = 1.0f;
         
+        [Tooltip("시설 가격 설정 (ScriptableObject)")]
+        public FacilityPriceConfigSO facilityPriceConfig;
+        
         [Header("디버그 설정")]
         [Tooltip("디버그 로그 표시 여부")]
         public bool showDebugLogs = false;
@@ -248,6 +251,415 @@ namespace JY
             }
             
             return amount;
+        }
+
+        /// <summary>
+        /// 선베드 사용 요금 처리 (FacilityPriceConfig 사용)
+        /// </summary>
+        /// <param name="aiName">AI 이름</param>
+        /// <param name="isInRoom">방 안 선베드 여부 (true면 무료)</param>
+        public void ProcessSunbedPayment(string aiName, bool isInRoom)
+        {
+            if (facilityPriceConfig == null)
+            {
+                Debug.LogError($"[선베드 결제 실패] {aiName}: FacilityPriceConfig가 설정되지 않았습니다.");
+                return;
+            }
+            
+            // FacilityPriceConfig에서 가격 및 명성도 가져오기
+            int finalPrice = facilityPriceConfig.GetSunbedFinalPrice(isInRoom);
+            int reputation = facilityPriceConfig.sunbedReputation;
+            
+            // 방 안 선베드는 무료
+            if (finalPrice == 0)
+            {
+                Debug.Log($"[선베드 무료] {aiName}: 방 안 선베드 (방 가격에 포함)");
+                return;
+            }
+            
+            if (paymentSystem == null)
+            {
+                Debug.LogError($"[선베드 결제 실패] {aiName}: PaymentSystem이 null입니다.");
+                return;
+            }
+            
+            if (facilityPriceConfig.showPriceLogs)
+            {
+                Debug.Log($"[선베드 가격 정보] AI: {aiName}, 가격: {finalPrice}원, 명성도: {reputation}");
+            }
+            
+            // 로그 추가
+            if (showUsageLogs)
+            {
+                string usageLog = $"{aiName}이(가) 선베드 사용: {finalPrice}원, 명성도: {reputation}";
+                usedRoomLogs.Add(usageLog);
+                
+                // 로그 목록 크기 제한 (최근 20개만 유지)
+                if (usedRoomLogs.Count > 20)
+                {
+                    usedRoomLogs.RemoveAt(0);
+                }
+            }
+            
+            // 결제 시스템에 요금과 명성도 추가
+            paymentSystem.AddPayment(aiName, finalPrice, "Sunbed", reputation);
+            
+            // 즉시 결제 처리
+            int amount = paymentSystem.ProcessPayment(aiName);
+            
+            if (amount > 0 && showUsageLogs)
+            {
+                string paymentLog = $"{aiName}이(가) 선베드 {amount}원 결제 완료";
+                paymentLogs.Add(paymentLog);
+                
+                // 로그 목록 크기 제한 (최근 20개만 유지)
+                if (paymentLogs.Count > 20)
+                {
+                    paymentLogs.RemoveAt(0);
+                }
+                
+                Debug.Log($"[선베드 결제 완료] AI: {aiName}, 결제 금액: {amount}원, 명성도: {reputation}");
+            }
+        }
+
+        /// <summary>
+        /// 운동 시설 사용 요금 처리 (FacilityPriceConfig 사용 - 방 유무 상관없이 유료)
+        /// </summary>
+        /// <param name="aiName">AI 이름</param>
+        public void ProcessHealthFacilityPayment(string aiName)
+        {
+            if (facilityPriceConfig == null)
+            {
+                Debug.LogError($"[운동 시설 결제 실패] {aiName}: FacilityPriceConfig가 설정되지 않았습니다.");
+                return;
+            }
+            
+            // FacilityPriceConfig에서 가격 및 명성도 가져오기
+            int finalPrice = facilityPriceConfig.GetHealthFacilityFinalPrice();
+            int reputation = facilityPriceConfig.healthFacilityReputation;
+            
+            // 가격이 0원이면 무료
+            if (finalPrice == 0)
+            {
+                Debug.Log($"[운동 시설 무료] {aiName}: 설정에 따라 무료 제공");
+                return;
+            }
+            
+            if (paymentSystem == null)
+            {
+                Debug.LogError($"[운동 시설 결제 실패] {aiName}: PaymentSystem이 null입니다.");
+                return;
+            }
+            
+            if (facilityPriceConfig.showPriceLogs)
+            {
+                Debug.Log($"[운동 시설 가격 정보] AI: {aiName}, 가격: {finalPrice}원, 명성도: {reputation}");
+            }
+            
+            // 로그 추가
+            if (showUsageLogs)
+            {
+                string usageLog = $"{aiName}이(가) 운동 시설 사용: {finalPrice}원, 명성도: {reputation}";
+                usedRoomLogs.Add(usageLog);
+                
+                // 로그 목록 크기 제한 (최근 20개만 유지)
+                if (usedRoomLogs.Count > 20)
+                {
+                    usedRoomLogs.RemoveAt(0);
+                }
+            }
+            
+            // 결제 시스템에 요금과 명성도 추가
+            paymentSystem.AddPayment(aiName, finalPrice, "HealthFacility", reputation);
+            
+            // 즉시 결제 처리
+            int amount = paymentSystem.ProcessPayment(aiName);
+            
+            if (amount > 0 && showUsageLogs)
+            {
+                string paymentLog = $"{aiName}이(가) 운동 시설 {amount}원 결제 완료";
+                paymentLogs.Add(paymentLog);
+                
+                // 로그 목록 크기 제한 (최근 20개만 유지)
+                if (paymentLogs.Count > 20)
+                {
+                    paymentLogs.RemoveAt(0);
+                }
+                
+                Debug.Log($"[운동 시설 결제 완료] AI: {aiName}, 결제 금액: {amount}원, 명성도: {reputation}");
+            }
+        }
+
+        /// <summary>
+        /// 예식장 사용 요금 처리 (FacilityPriceConfig 사용 - 방 유무 상관없이 유료)
+        /// </summary>
+        /// <param name="aiName">AI 이름</param>
+        public void ProcessWeddingFacilityPayment(string aiName)
+        {
+            if (facilityPriceConfig == null)
+            {
+                Debug.LogError($"[예식장 결제 실패] {aiName}: FacilityPriceConfig가 설정되지 않았습니다.");
+                return;
+            }
+            
+            // FacilityPriceConfig에서 가격 및 명성도 가져오기
+            int finalPrice = facilityPriceConfig.GetWeddingFacilityFinalPrice();
+            int reputation = facilityPriceConfig.weddingFacilityReputation;
+            
+            // 가격이 0원이면 무료
+            if (finalPrice == 0)
+            {
+                Debug.Log($"[예식장 무료] {aiName}: 설정에 따라 무료 제공");
+                return;
+            }
+            
+            if (paymentSystem == null)
+            {
+                Debug.LogError($"[예식장 결제 실패] {aiName}: PaymentSystem이 null입니다.");
+                return;
+            }
+            
+            if (facilityPriceConfig.showPriceLogs)
+            {
+                Debug.Log($"[예식장 가격 정보] AI: {aiName}, 가격: {finalPrice}원, 명성도: {reputation}");
+            }
+            
+            // 로그 추가
+            if (showUsageLogs)
+            {
+                string usageLog = $"{aiName}이(가) 예식장 사용: {finalPrice}원, 명성도: {reputation}";
+                usedRoomLogs.Add(usageLog);
+                
+                // 로그 목록 크기 제한 (최근 20개만 유지)
+                if (usedRoomLogs.Count > 20)
+                {
+                    usedRoomLogs.RemoveAt(0);
+                }
+            }
+            
+            // 결제 시스템에 요금과 명성도 추가
+            paymentSystem.AddPayment(aiName, finalPrice, "WeddingFacility", reputation);
+            
+            // 즉시 결제 처리
+            int amount = paymentSystem.ProcessPayment(aiName);
+            
+            if (amount > 0 && showUsageLogs)
+            {
+                string paymentLog = $"{aiName}이(가) 예식장 {amount}원 결제 완료";
+                paymentLogs.Add(paymentLog);
+                
+                // 로그 목록 크기 제한 (최근 20개만 유지)
+                if (paymentLogs.Count > 20)
+                {
+                    paymentLogs.RemoveAt(0);
+                }
+                
+                Debug.Log($"[예식장 결제 완료] AI: {aiName}, 결제 금액: {amount}원, 명성도: {reputation}");
+            }
+        }
+
+        /// <summary>
+        /// 라운지 사용 요금 처리 (FacilityPriceConfig 사용 - 방 유무 상관없이 유료)
+        /// </summary>
+        /// <param name="aiName">AI 이름</param>
+        public void ProcessLoungeFacilityPayment(string aiName)
+        {
+            if (facilityPriceConfig == null)
+            {
+                Debug.LogError($"[라운지 결제 실패] {aiName}: FacilityPriceConfig가 설정되지 않았습니다.");
+                return;
+            }
+            
+            // FacilityPriceConfig에서 가격 및 명성도 가져오기
+            int finalPrice = facilityPriceConfig.GetLoungeFacilityFinalPrice();
+            int reputation = facilityPriceConfig.loungeFacilityReputation;
+            
+            // 가격이 0원이면 무료
+            if (finalPrice == 0)
+            {
+                Debug.Log($"[라운지 무료] {aiName}: 설정에 따라 무료 제공");
+                return;
+            }
+            
+            if (paymentSystem == null)
+            {
+                Debug.LogError($"[라운지 결제 실패] {aiName}: PaymentSystem이 null입니다.");
+                return;
+            }
+            
+            if (facilityPriceConfig.showPriceLogs)
+            {
+                Debug.Log($"[라운지 가격 정보] AI: {aiName}, 가격: {finalPrice}원, 명성도: {reputation}");
+            }
+            
+            // 로그 추가
+            if (showUsageLogs)
+            {
+                string usageLog = $"{aiName}이(가) 라운지 사용: {finalPrice}원, 명성도: {reputation}";
+                usedRoomLogs.Add(usageLog);
+                
+                // 로그 목록 크기 제한 (최근 20개만 유지)
+                if (usedRoomLogs.Count > 20)
+                {
+                    usedRoomLogs.RemoveAt(0);
+                }
+            }
+            
+            // 결제 시스템에 요금과 명성도 추가
+            paymentSystem.AddPayment(aiName, finalPrice, "LoungeFacility", reputation);
+            
+            // 즉시 결제 처리
+            int amount = paymentSystem.ProcessPayment(aiName);
+            
+            if (amount > 0 && showUsageLogs)
+            {
+                string paymentLog = $"{aiName}이(가) 라운지 {amount}원 결제 완료";
+                paymentLogs.Add(paymentLog);
+                
+                // 로그 목록 크기 제한 (최근 20개만 유지)
+                if (paymentLogs.Count > 20)
+                {
+                    paymentLogs.RemoveAt(0);
+                }
+                
+                Debug.Log($"[라운지 결제 완료] AI: {aiName}, 결제 금액: {amount}원, 명성도: {reputation}");
+            }
+        }
+
+        /// <summary>
+        /// 연회장 사용 요금 처리 (FacilityPriceConfig 사용 - 방 유무 상관없이 유료)
+        /// </summary>
+        /// <param name="aiName">AI 이름</param>
+        public void ProcessHallFacilityPayment(string aiName)
+        {
+            if (facilityPriceConfig == null)
+            {
+                Debug.LogError($"[연회장 결제 실패] {aiName}: FacilityPriceConfig가 설정되지 않았습니다.");
+                return;
+            }
+            
+            // FacilityPriceConfig에서 가격 및 명성도 가져오기
+            int finalPrice = facilityPriceConfig.GetHallFacilityFinalPrice();
+            int reputation = facilityPriceConfig.hallFacilityReputation;
+            
+            // 가격이 0원이면 무료
+            if (finalPrice == 0)
+            {
+                Debug.Log($"[연회장 무료] {aiName}: 설정에 따라 무료 제공");
+                return;
+            }
+            
+            if (paymentSystem == null)
+            {
+                Debug.LogError($"[연회장 결제 실패] {aiName}: PaymentSystem이 null입니다.");
+                return;
+            }
+            
+            if (facilityPriceConfig.showPriceLogs)
+            {
+                Debug.Log($"[연회장 가격 정보] AI: {aiName}, 가격: {finalPrice}원, 명성도: {reputation}");
+            }
+            
+            // 로그 추가
+            if (showUsageLogs)
+            {
+                string usageLog = $"{aiName}이(가) 연회장 사용: {finalPrice}원, 명성도: {reputation}";
+                usedRoomLogs.Add(usageLog);
+                
+                // 로그 목록 크기 제한 (최근 20개만 유지)
+                if (usedRoomLogs.Count > 20)
+                {
+                    usedRoomLogs.RemoveAt(0);
+                }
+            }
+            
+            // 결제 시스템에 요금과 명성도 추가
+            paymentSystem.AddPayment(aiName, finalPrice, "HallFacility", reputation);
+            
+            // 즉시 결제 처리
+            int amount = paymentSystem.ProcessPayment(aiName);
+            
+            if (amount > 0 && showUsageLogs)
+            {
+                string paymentLog = $"{aiName}이(가) 연회장 {amount}원 결제 완료";
+                paymentLogs.Add(paymentLog);
+                
+                // 로그 목록 크기 제한 (최근 20개만 유지)
+                if (paymentLogs.Count > 20)
+                {
+                    paymentLogs.RemoveAt(0);
+                }
+                
+                Debug.Log($"[연회장 결제 완료] AI: {aiName}, 결제 금액: {amount}원, 명성도: {reputation}");
+            }
+        }
+
+        /// <summary>
+        /// 사우나 사용 요금 처리 (FacilityPriceConfig 사용 - 방 유무 상관없이 유료)
+        /// </summary>
+        /// <param name="aiName">AI 이름</param>
+        public void ProcessSaunaFacilityPayment(string aiName)
+        {
+            if (facilityPriceConfig == null)
+            {
+                Debug.LogError($"[사우나 결제 실패] {aiName}: FacilityPriceConfig가 설정되지 않았습니다.");
+                return;
+            }
+            
+            // FacilityPriceConfig에서 가격 및 명성도 가져오기
+            int finalPrice = facilityPriceConfig.GetSaunaFacilityFinalPrice();
+            int reputation = facilityPriceConfig.saunaFacilityReputation;
+            
+            // 가격이 0원이면 무료
+            if (finalPrice == 0)
+            {
+                Debug.Log($"[사우나 무료] {aiName}: 설정에 따라 무료 제공");
+                return;
+            }
+            
+            if (paymentSystem == null)
+            {
+                Debug.LogError($"[사우나 결제 실패] {aiName}: PaymentSystem이 null입니다.");
+                return;
+            }
+            
+            if (facilityPriceConfig.showPriceLogs)
+            {
+                Debug.Log($"[사우나 가격 정보] AI: {aiName}, 가격: {finalPrice}원, 명성도: {reputation}");
+            }
+            
+            // 로그 추가
+            if (showUsageLogs)
+            {
+                string usageLog = $"{aiName}이(가) 사우나 사용: {finalPrice}원, 명성도: {reputation}";
+                usedRoomLogs.Add(usageLog);
+                
+                // 로그 목록 크기 제한 (최근 20개만 유지)
+                if (usedRoomLogs.Count > 20)
+                {
+                    usedRoomLogs.RemoveAt(0);
+                }
+            }
+            
+            // 결제 시스템에 요금과 명성도 추가
+            paymentSystem.AddPayment(aiName, finalPrice, "SaunaFacility", reputation);
+            
+            // 즉시 결제 처리
+            int amount = paymentSystem.ProcessPayment(aiName);
+            
+            if (amount > 0 && showUsageLogs)
+            {
+                string paymentLog = $"{aiName}이(가) 사우나 {amount}원 결제 완료";
+                paymentLogs.Add(paymentLog);
+                
+                // 로그 목록 크기 제한 (최근 20개만 유지)
+                if (paymentLogs.Count > 20)
+                {
+                    paymentLogs.RemoveAt(0);
+                }
+                
+                Debug.Log($"[사우나 결제 완료] AI: {aiName}, 결제 금액: {amount}원, 명성도: {reputation}");
+            }
         }
 
         /// <summary>

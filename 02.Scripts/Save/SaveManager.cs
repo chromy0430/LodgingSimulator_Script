@@ -8,6 +8,43 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 [System.Serializable]
+public class AISaveData // AI 저장 데이터
+{
+    public string aiName;
+    public Vector3 position;
+    public Quaternion rotation;
+    public int currentRoomIndex;
+    public string currentState;  // AIState enum을 string으로 저장
+    
+    // AI 상태 플래그들
+    public bool isUsingHealth;
+    public bool isUsingWedding;
+    public bool isUsingLounge;
+    public bool isUsingHall;
+    public bool isUsingSauna;
+    public bool isSaunaSitting; // 사우나에서 앉기(true) 또는 눕기(false)
+    public bool isUsingSunbed;
+    public bool isEating;
+    public bool isUsingBathtub;
+    public bool isSleeping;
+    public bool isNapping;
+    
+    // 시설 위치 (Transform 대신 위치로 저장)
+    public Vector3 currentHealthPosition;
+    public Vector3 currentWeddingPosition;
+    public Vector3 currentLoungePosition;
+    public Vector3 currentHallPosition;
+    public Vector3 currentSaunaPosition;
+    public Vector3 currentSunbedPosition;
+    public bool hasHealthPosition;
+    public bool hasWeddingPosition;
+    public bool hasLoungePosition;
+    public bool hasHallPosition;
+    public bool hasSaunaPosition;
+    public bool hasSunbedPosition;
+}
+
+[System.Serializable]
 public class SaveData // 저장할 데이터
 {
     public int playerMoney;
@@ -31,6 +68,9 @@ public class SaveData // 저장할 데이터
 
     // 통계 데이터
     public List<DailyDataSave> dailyStatistics;
+    
+    // AI 데이터
+    public List<AISaveData> aiAgents;
 }
 
 [System.Serializable]
@@ -144,6 +184,35 @@ public class SaveManager : MonoBehaviour
             Debug.Log($"[SaveManager] 최종 저장될 통계 데이터 개수: {statisticsToSave.Count}");
         }
 
+        // AI 데이터 저장 준비
+        List<AISaveData> aiSaveDataList = new List<AISaveData>();
+        
+        // ✅ AISpawner를 통해 활성화된 AI만 가져오기
+        if (JY.AISpawner.Instance != null)
+        {
+            List<GameObject> activeAIs = JY.AISpawner.Instance.GetActiveAIs();
+            Debug.Log($"[SaveManager] 저장할 AI 확인: {activeAIs.Count}명 (AISpawner에서)");
+            
+            foreach (var aiObj in activeAIs)
+            {
+                if (aiObj != null)
+                {
+                    JY.AIAgent aiAgent = aiObj.GetComponent<JY.AIAgent>();
+                    if (aiAgent != null)
+                    {
+                        AISaveData aiData = aiAgent.GetSaveData();
+                        aiSaveDataList.Add(aiData);
+                        Debug.Log($"  - {aiData.aiName}: 위치={aiData.position}, 방={aiData.currentRoomIndex}, 상태={aiData.currentState}");
+                    }
+                }
+            }
+            Debug.Log($"[SaveManager] AI {aiSaveDataList.Count}명 저장 준비 완료");
+        }
+        else
+        {
+            Debug.LogWarning("[SaveManager] AISpawner가 없어 AI 저장 불가");
+        }
+
         SaveData saveData = new SaveData
         {
             playerMoney = PlayerWallet.Instance.money,
@@ -162,7 +231,8 @@ public class SaveManager : MonoBehaviour
             availableQuestNames = QuestManager.Instance.availableQuests.AsValueEnumerable().Select(q => q.questName).ToList(),
             currentQuestName = (QuestManager.Instance.CurrentQuest != null) ? QuestManager.Instance.CurrentQuest.questName : null,
             dailyStatistics = statisticsToSave,
-            isTutorialFinished = NewTutorialGuide.Instance.isTutorialFinish
+            isTutorialFinished = NewTutorialGuide.Instance.isTutorialFinish,
+            aiAgents = aiSaveDataList  // ✅ AI 데이터 추가
         };
 
         try
@@ -366,7 +436,7 @@ public class SaveManager : MonoBehaviour
 
                 foreach (var savedData in loadedSaveData.dailyStatistics)
                 {
-                    Debug.Log($"  - Day {savedData.day} 복원 시작: Gold={savedData.goldEarned}, Rep={savedData.reputationGained}");
+                    Debug.Log($"  - Day {savedData.day} 복원 시작: Gold={savedData.goldEarned}, Rep={savedData.reputationGained}, Visitors={savedData.totalVisitors}");
 
                     // 해당 일차의 통계를 가져오거나 생성
                     var dailyStats = DailyStatisticsManager.Instance.StatisticsContainer.GetOrCreateDailyStatistics(savedData.day);
@@ -394,7 +464,7 @@ public class SaveManager : MonoBehaviour
                     if (existingData == null)
                     {
                         dailyStats.dailyData.Add(dailyData);
-                        Debug.Log($"    → Day {savedData.day} dailyData 추가");
+                        Debug.Log($"    → Day {savedData.day} dailyData 추가: Visitors={savedData.totalVisitors}");
                     }
                     else
                     {
@@ -406,20 +476,42 @@ public class SaveManager : MonoBehaviour
                         existingData.startingGold = savedData.startingGold;
                         existingData.endingReputation = savedData.endingReputation;
                         existingData.endingGold = savedData.endingGold;
-                        Debug.Log($"    → Day {savedData.day} 기존 dailyData 업데이트");
+                        Debug.Log($"    → Day {savedData.day} 기존 dailyData 업데이트: Visitors={savedData.totalVisitors}");
                     }
 
                     // 총계 업데이트
                     dailyStats.totalReputationGained = savedData.reputationGained;
                     dailyStats.totalGoldEarned = savedData.goldEarned;
                     dailyStats.totalVisitors = savedData.totalVisitors;
+                    
+                    // 시작 값도 복원
+                    dailyStats.startingReputation = savedData.startingReputation;
+                    dailyStats.startingGold = savedData.startingGold;
+                }
+
+                // ✅ 중요: 현재 날짜의 DailyStatisticsManager 런타임 변수 복원
+                int currentDay = loadedSaveData.currentDay;
+                var currentDayData = loadedSaveData.dailyStatistics.Find(d => d.day == currentDay);
+                if (currentDayData != null)
+                {
+                    // 현재 날의 방문자 수 복원
+                    DailyStatisticsManager.Instance.RestoreCurrentDayData(
+                        currentDayData.totalVisitors,
+                        currentDayData.startingReputation,
+                        currentDayData.startingGold
+                    );
+                    Debug.Log($"[SaveManager] 현재 날({currentDay}일차) 런타임 변수 복원: Visitors={currentDayData.totalVisitors}, StartGold={currentDayData.startingGold}, StartRep={currentDayData.startingReputation}");
+                }
+                else
+                {
+                    Debug.Log($"[SaveManager] 현재 날({currentDay}일차) 데이터가 없어 런타임 변수를 기본값으로 초기화");
                 }
 
                 Debug.Log($"통계 데이터 복원 완료: {loadedSaveData.dailyStatistics.Count}일치");
                 Debug.Log($"[SaveManager 로드 완료] statisticsContainer.dailyStatistics 최종 개수: {DailyStatisticsManager.Instance.StatisticsContainer.dailyStatistics.Count}");
                 foreach (var stats in DailyStatisticsManager.Instance.StatisticsContainer.dailyStatistics)
                 {
-                    Debug.Log($"  - Day {stats.day}: dailyData 개수={stats.dailyData?.Count ?? 0}");
+                    Debug.Log($"  - Day {stats.day}: dailyData 개수={stats.dailyData?.Count ?? 0}, totalVisitors={stats.totalVisitors}");
                 }
             }
 
@@ -429,15 +521,97 @@ public class SaveManager : MonoBehaviour
 
             NewTutorialGuide.Instance.isTutorialFinish = loadedSaveData.isTutorialFinished;
 
-            Debug.Log("게임 데이터 복원 완료");
+            // ✅ AI 데이터 복원은 코루틴으로 지연 (오브젝트 배치 완료 대기)
+            StartCoroutine(RestoreAIDataDelayed());
+
+            Debug.Log("게임 데이터 복원 완료 (AI 복원은 코루틴에서 처리)");
         }
         catch (System.Exception e)
         {
             Debug.LogError($"데이터 복원 중 오류 발생: {e.Message}\nStackTrace: {e.StackTrace}");
         }
+    }
+
+    /// <summary>
+    /// 오브젝트 배치 완료 후 AI 복원 (지연 실행)
+    /// </summary>
+    private IEnumerator RestoreAIDataDelayed()
+    {
+        // ✅ 2프레임 대기 (오브젝트 생성 및 태그 등록 완료 보장)
+        yield return null;
+        yield return null;
+        
+        Debug.Log("[SaveManager] 오브젝트 배치 완료 - AI 복원 시작");
+        
+        try
+        {
+            // AI 데이터 복원
+            if (loadedSaveData != null && loadedSaveData.aiAgents != null && loadedSaveData.aiAgents.Count > 0)
+            {
+                Debug.Log($"[SaveManager] AI {loadedSaveData.aiAgents.Count}명 복원 시작");
+                
+                // ✅ AISpawner를 통해 모든 AI (활성화 + 비활성화) 가져오기
+                if (JY.AISpawner.Instance != null)
+                {
+                    // ✅ 먼저 기존 활성 AI를 모두 비활성화
+                    JY.AISpawner.Instance.DeactivateAllAIs();
+                    Debug.Log($"[SaveManager] 기존 AI 모두 비활성화 완료");
+                    
+                    List<GameObject> allAIs = JY.AISpawner.Instance.GetAllAIs();
+                    Debug.Log($"[SaveManager] 사용 가능한 AI: {allAIs.Count}명 (AISpawner 풀)");
+                    
+                    // AI 이름으로 매칭하여 복원
+                    int restoredCount = 0;
+                    foreach (var savedAI in loadedSaveData.aiAgents)
+                    {
+                        GameObject matchingAIObj = allAIs.Find(ai => ai.name == savedAI.aiName);
+                        if (matchingAIObj != null)
+                        {
+                            JY.AIAgent aiAgent = matchingAIObj.GetComponent<JY.AIAgent>();
+                            if (aiAgent != null)
+                            {
+                                // ✅ AISpawner를 통해 AI 활성화 및 리스트 관리
+                                JY.AISpawner.Instance.RestoreAI(matchingAIObj);
+                                
+                                // 데이터 복원
+                                aiAgent.LoadFromSaveData(savedAI);
+                                restoredCount++;
+                                Debug.Log($"  - {savedAI.aiName} 복원 완료: 위치={savedAI.position}, 방={savedAI.currentRoomIndex}, 상태={savedAI.currentState}");
+                            }
+                        }
+                        else
+                        {
+                            Debug.LogWarning($"[SaveManager] AI를 찾을 수 없음: {savedAI.aiName}");
+                        }
+                    }
+                    Debug.Log($"[SaveManager] AI 복원 완료: {restoredCount}/{loadedSaveData.aiAgents.Count}명");
+                }
+                else
+                {
+                    Debug.LogError("[SaveManager] AISpawner가 없어 AI 복원 불가");
+                }
+            }
+            else
+            {
+                Debug.Log("[SaveManager] 저장된 AI 데이터 없음");
+                
+                // ✅ 저장된 AI가 없으면 기존 AI도 모두 비활성화
+                if (JY.AISpawner.Instance != null)
+                {
+                    JY.AISpawner.Instance.DeactivateAllAIs();
+                    Debug.Log($"[SaveManager] 저장된 AI 없음 - 모든 AI 비활성화");
+                }
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"AI 복원 중 오류 발생: {e.Message}\nStackTrace: {e.StackTrace}");
+        }
         finally
         {
+            // ✅ 모든 복원이 완료된 후 loadedSaveData 정리
             loadedSaveData = null;
+            Debug.Log("[SaveManager] 모든 데이터 복원 완료 (AI 포함)");
         }
     }
 

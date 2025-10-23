@@ -369,8 +369,10 @@ public class CounterManager : MonoBehaviour
         
         if (requiresEmployee)
         {
-            // 직원이 필요한 경우 - 배정된 직원이 있고 고용된 상태인지 확인
-            isCounterActive = assignedEmployee != null && assignedEmployee.IsHired;
+            // ✅ 직원이 필요한 경우 - 배정된 직원이 있고, 고용되었고, 근무시간이며, 작업 위치에 도착했는지 확인
+            isCounterActive = assignedEmployee != null && 
+                              assignedEmployee.IsHired && 
+                              assignedEmployee.IsWorkTime;
         }
         else
         {

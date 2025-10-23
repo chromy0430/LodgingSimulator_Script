@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.EventSystems; // UI 클릭 감지를 위해 추가
 
@@ -17,6 +18,7 @@ public class NewTutorialGuide : MonoBehaviour
     private TutorialStep currentStep;
     private bool isWaitingForAction = false;
     private int initialObjectCount = 0; // 건설 감지를 위한 초기 오브젝트 수
+    private int initialNonNullObjectCount = 0;
 
     public bool isTutorialFinish = false;
     public static NewTutorialGuide Instance { get; private set; }
@@ -83,7 +85,15 @@ public class NewTutorialGuide : MonoBehaviour
 
         if (currentStep.triggerType == TutorialTriggerType.PlaceObject)
         {
-            initialObjectCount = objectPlacer.placedGameObjects.Count;
+            initialObjectCount = objectPlacer.placedGameObjects.AsEnumerable().Count(obj => obj != null); ;
+        }
+
+        if (currentStep.triggerType == TutorialTriggerType.RemoveObject)
+        {
+            if (objectPlacer != null) // null 체크 추가
+            {
+                initialNonNullObjectCount = objectPlacer.placedGameObjects.AsEnumerable().Count(obj => obj != null);
+            }
         }
 
         isWaitingForAction = true;
@@ -127,12 +137,15 @@ public class NewTutorialGuide : MonoBehaviour
                 }
                 break;
             case TutorialTriggerType.PlaceObject:
-                // 건설된 오브젝트 수가 증가했는지 확인
                 if (objectPlacer.placedGameObjects.Count > initialObjectCount)
                 {
-                    // 마지막으로 추가된 오브젝트가 우리가 원하는 오브젝트인지 확인
-                    // 이 방식은 완벽하지 않지만, PlacementSystem 수정 없이 가능합니다.
-                    // 더 정확하게 하려면 ObjectPlacer에서 마지막에 배치된 오브젝트 정보를 가져와야 합니다.
+                    conditionMet = true;
+                }
+                break;
+            case TutorialTriggerType.RemoveObject:
+                int currentNonNullObjectCountRemove = objectPlacer.placedGameObjects.Count(obj => obj != null);
+                if (currentNonNullObjectCountRemove < initialNonNullObjectCount)
+                {
                     conditionMet = true;
                 }
                 break;

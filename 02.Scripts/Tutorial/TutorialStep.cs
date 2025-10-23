@@ -10,7 +10,8 @@ public enum TutorialTriggerType
     KeyPress,       // 특정 키를 눌렀을 때
     BuildUIOpen,    // 건설 UI가 열렸을 때
     BuildButtonClick, // 건설 UI의 특정 버튼을 눌렀을 때
-    PlaceObject     // 특정 오브젝트를 건설했을 때
+    PlaceObject,     // 특정 오브젝트를 건설했을 때
+    RemoveObject
 }
 
 [CreateAssetMenu(fileName = "TutorialStep", menuName = "Tutorial/New Tutorial Step")]

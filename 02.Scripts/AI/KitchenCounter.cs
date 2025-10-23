@@ -124,18 +124,26 @@ namespace JY
         /// </summary>
         public bool TryJoinQueue(AIAgent agent)
         {
-            DebugLog($"대기열 진입 요청 - AI: {agent.gameObject.name}, 현재 대기 인원: {customerQueue.Count}/{maxQueueLength}");
+            DebugLog($"대기열 진입 요청 - AI: {agent.gameObject.name}, 현재 대기 인원: {customerQueue.Count}/{maxQueueLength}", true);
+            
+            // 직원이 없으면 대기열 진입 불가
+            AIEmployee availableEmployee = FindNearbyEmployee();
+            if (availableEmployee == null)
+            {
+                DebugLog($"사용 가능한 직원이 없습니다. AI {agent.gameObject.name}의 대기열 진입 거부", true);
+                return false;
+            }
             
             if (customerQueue.Count >= maxQueueLength)
             {
-                DebugLog($"대기열이 가득 찼습니다. (현재 {customerQueue.Count}명, 최대 {maxQueueLength}명)");
+                DebugLog($"대기열이 가득 찼습니다. (현재 {customerQueue.Count}명, 최대 {maxQueueLength}명)", true);
                 return false;
             }
 
             customerQueue.Enqueue(agent);
             queueJoinTimes[agent] = Time.time; // 대기 시작 시간 기록
             UpdateQueuePositions();
-            DebugLog($"AI {agent.gameObject.name}이(가) 주방 대기열에 합류했습니다. (대기 인원: {customerQueue.Count}명)");
+            DebugLog($"AI {agent.gameObject.name}이(가) 주방 대기열에 합류했습니다. (대기 인원: {customerQueue.Count}명, 담당 직원: {availableEmployee.employeeName})", true);
             return true;
         }
         
@@ -215,6 +223,9 @@ namespace JY
         {
             DebugLog($"대기열 위치 업데이트 시작 - 총 {customerQueue.Count}명, 현재 서비스 고객: {(currentCustomer != null ? currentCustomer.name : "없음")}");
             
+            // 카운터를 바라보는 회전값 계산 (카운터 방향)
+            Quaternion faceCounterRotation = Quaternion.LookRotation(transform.forward);
+            
             int queueIndex = 0;
             int agentIndex = 0;
             
@@ -224,16 +235,16 @@ namespace JY
                 {
                     if (agent == currentCustomer)
                     {
-                        // 현재 서비스 받는 고객은 서비스 위치로
-                        agent.SetQueueDestination(counterFront);
+                        // 현재 서비스 받는 고객은 서비스 위치로 (회전 포함)
+                        agent.SetQueueDestination(counterFront, faceCounterRotation);
                         DebugLog($"AI {agent.name}: 서비스 위치로 이동 설정 (위치: {counterFront})");
                     }
                     else
                     {
-                        // 대기 중인 고객들은 대기열 위치로 (queueIndex 사용)
+                        // 대기 중인 고객들은 대기열 위치로 (queueIndex 사용, 회전 포함)
                         float distance = counterServiceDistance + (queueIndex * queueSpacing);
                         Vector3 queuePosition = transform.position + transform.forward * distance;
-                        agent.SetQueueDestination(queuePosition);
+                        agent.SetQueueDestination(queuePosition, faceCounterRotation);
                         DebugLog($"AI {agent.name}: 대기열 {queueIndex + 1}번째 위치로 이동 설정 (위치: {queuePosition})");
                         queueIndex++; // 대기열 순서만 증가
                     }
@@ -278,11 +289,11 @@ namespace JY
             {
                 AIAgent nextCustomer = customerQueue.Peek(); // 다음 고객 확인
                 
-                // ✅ 고객이 실제로 서비스 위치에 도착했을 때만 currentCustomer 설정
+                // 고객이 실제로 서비스 위치에 도착했을 때만 currentCustomer 설정
                 if (nextCustomer != null && IsCustomerAtServicePosition(nextCustomer))
                 {
                     currentCustomer = nextCustomer;
-                    DebugLog($"✅ 고객 {currentCustomer.name}이 서비스 위치 도착 - 서비스 시작");
+                    DebugLog($"고객 {currentCustomer.name}이 서비스 위치 도착 - 서비스 시작");
                     TryPlaceOrder();
                 }
                 else if (nextCustomer != null)
@@ -315,13 +326,13 @@ namespace JY
         /// </summary>
         public void TryPlaceOrder()
         {
-            DebugLog($"🔄 TryPlaceOrder 호출됨 - 현재고객: {(currentCustomer != null ? currentCustomer.name : "null")}, 처리중: {isProcessingOrder}");
+            DebugLog($"TryPlaceOrder 호출됨 - 현재고객: {(currentCustomer != null ? currentCustomer.name : "null")}, 처리중: {isProcessingOrder}");
             
             if (isProcessingOrder) return;
             
             if (currentCustomer == null)
             {
-                DebugLog("❌ 현재 고객이 없습니다.");
+                DebugLog("현재 고객이 없습니다.");
                 return;
             }
             
@@ -329,13 +340,13 @@ namespace JY
             AIEmployee targetEmployee = FindNearbyEmployee();
             if (targetEmployee == null)
             {
-                DebugLog("❌ 근처에 이용 가능한 직원이 없습니다. 고객 대기 중...");
+                DebugLog("근처에 이용 가능한 직원이 없습니다. 고객 대기 중...");
                 // 직원이 없으면 현재 고객을 null로 설정 (큐에는 그대로 유지)
                 currentCustomer = null;
                 return;
             }
             
-            DebugLog($"🍽️ 주문 처리 시작 - 고객: {currentCustomer.name}, 직원: {targetEmployee.employeeName}");
+            DebugLog($"주문 처리 시작 - 고객: {currentCustomer.name}, 직원: {targetEmployee.employeeName}");
             
             // 주문 처리 시작
             StartCoroutine(ProcessOrderCoroutine(targetEmployee));
@@ -356,15 +367,15 @@ namespace JY
             bool isWaitingState = customer.IsWaitingAtKitchenCounter;
             bool hasArrived = distance <= arrivalThreshold || isWaitingState;
             
-            DebugLog($"🔍 위치확인 - 고객: {customer.name}, 고객위치: {customer.transform.position}, 서비스위치: {counterFront}, 거리: {distance:F1}m, 대기상태: {isWaitingState}");
+            DebugLog($"위치확인 - 고객: {customer.name}, 고객위치: {customer.transform.position}, 서비스위치: {counterFront}, 거리: {distance:F1}m, 대기상태: {isWaitingState}");
             
             if (hasArrived)
             {
-                DebugLog($"✅ 고객 {customer.name} 서비스 위치 도착 확인 (거리: {distance:F1}m, 대기상태: {isWaitingState})");
+                DebugLog($"고객 {customer.name} 서비스 위치 도착 확인 (거리: {distance:F1}m, 대기상태: {isWaitingState})");
             }
             else
             {
-                DebugLog($"❌ 고객 {customer.name} 아직 이동 중 (거리: {distance:F1}m, 필요: {arrivalThreshold}m 이내, 대기상태: {isWaitingState})");
+                DebugLog($"고객 {customer.name} 아직 이동 중 (거리: {distance:F1}m, 필요: {arrivalThreshold}m 이내, 대기상태: {isWaitingState})");
             }
             
             return hasArrived;
@@ -378,10 +389,22 @@ namespace JY
             isProcessingOrder = true;
             currentAssignedEmployee = employee;
             
-            DebugLog($"🍽️ 주문 처리 시작 - 고객: {(currentCustomer != null ? currentCustomer.name : "Unknown")}, 담당 직원: {employee.employeeName}");
+            DebugLog($"주문 처리 시작 - 고객: {(currentCustomer != null ? currentCustomer.name : "Unknown")}, 담당 직원: {(employee != null ? employee.employeeName : "NULL!")}", true);
+            
+            if (employee == null)
+            {
+                DebugLog("employee가 null입니다! 주문 처리 중단", true);
+                isProcessingOrder = false;
+                currentAssignedEmployee = null;
+                yield break;
+            }
+            
+            DebugLog($"직원 AI에게 StartOrderProcessing() 호출 - IsHired: {employee.IsHired}, IsWorkTime: {employee.IsWorkTime}, isProcessingOrder: {employee.isProcessingOrder}", true);
             
             // AI 직원에게 주문 전달
             employee.StartOrderProcessing();
+            
+            DebugLog($"StartOrderProcessing() 호출 완료 - employee.isProcessingOrder: {employee.isProcessingOrder}", true);
             
             // 처리 완료까지 대기 (최대 20초)
             float timeout = 20f;
@@ -397,11 +420,11 @@ namespace JY
             if (customerQueue.Count > 0 && customerQueue.Peek() == currentCustomer)
             {
                 AIAgent completedCustomer = customerQueue.Dequeue();
-                DebugLog($"✅ 서비스 완료로 AI {completedCustomer.name}을(를) 대기열에서 제거 (남은 대기: {customerQueue.Count}명)");
+                DebugLog($"서비스 완료로 AI {completedCustomer.name}을(를) 대기열에서 제거 (남은 대기: {customerQueue.Count}명)");
             }
             else
             {
-                DebugLog($"⚠️ 서비스 완료 시 대기열 상태 불일치 - 큐 크기: {customerQueue.Count}, 현재 고객: {(currentCustomer != null ? currentCustomer.name : "null")}");
+                DebugLog($"서비스 완료 시 대기열 상태 불일치 - 큐 크기: {customerQueue.Count}, 현재 고객: {(currentCustomer != null ? currentCustomer.name : "null")}");
             }
             
             // 처리 완료
@@ -421,7 +444,7 @@ namespace JY
             // 대기열 위치 업데이트
             UpdateQueuePositions();
             
-            DebugLog($"✅ 주문 처리 완료 - 대기 고객: {customerQueue.Count}명");
+            DebugLog($"주문 처리 완료 - 대기 고객: {customerQueue.Count}명");
         }
         
         /// <summary>
@@ -429,24 +452,58 @@ namespace JY
         /// </summary>
         private AIEmployee FindNearbyEmployee()
         {
-            // 이미 배정된 전담 직원이 있고, 사용 가능하면 그 직원 사용
+            // 1단계: 이미 배정된 전담 직원이 있고, 사용 가능하면 그 직원 사용
             if (assignedKitchenEmployee != null && 
-                assignedKitchenEmployee.isHired && 
-                !assignedKitchenEmployee.isProcessingOrder)
+                assignedKitchenEmployee.IsHired &&  // isHired -> IsHired (프로퍼티)
+                assignedKitchenEmployee.IsWorkTime &&
+                !assignedKitchenEmployee.isProcessingOrder &&
+                assignedKitchenEmployee.CurrentState == AIEmployee.EmployeeState.Working && // 작업 위치에 도착한 직원만!
+                assignedKitchenEmployee.workPosition != null) // 작업 위치가 있는지 확인
             {
                 DebugLog($"전담 직원 사용: {assignedKitchenEmployee.employeeName}");
                 return assignedKitchenEmployee;
             }
+            else if (assignedKitchenEmployee != null)
+            {
+                // 전담 직원이 있지만 사용 불가능한 이유 로그
+                if (!assignedKitchenEmployee.IsHired)
+                    DebugLog($"전담 직원 {assignedKitchenEmployee.employeeName}이(가) 고용되지 않음");
+                else if (!assignedKitchenEmployee.IsWorkTime)
+                    DebugLog($"전담 직원 {assignedKitchenEmployee.employeeName}이(가) 근무 시간이 아님");
+                else if (assignedKitchenEmployee.isProcessingOrder)
+                    DebugLog($"전담 직원 {assignedKitchenEmployee.employeeName}이(가) 주문 처리 중");
+                else if (assignedKitchenEmployee.CurrentState != AIEmployee.EmployeeState.Working)
+                    DebugLog($"전담 직원 {assignedKitchenEmployee.employeeName}이(가) 작업 위치에 없음 (상태: {assignedKitchenEmployee.CurrentState})");
+                else if (assignedKitchenEmployee.workPosition == null)
+                    DebugLog($"전담 직원 {assignedKitchenEmployee.employeeName}의 작업 위치가 없음");
+            }
             
-            // 전담 직원이 없거나 사용 불가능하면 새로 배정
+            // 2단계: 전담 직원이 없거나 사용 불가능하면 새로 배정
             AIEmployee[] allEmployees = FindObjectsByType<AIEmployee>(FindObjectsSortMode.None);
+            DebugLog($"주방 직원 검색 시작 - 전체 직원 수: {allEmployees.Length}");
+            
             AIEmployee closestEmployee = null;
             float closestDistance = float.MaxValue;
+            int validEmployeeCount = 0;
             
             foreach (AIEmployee employee in allEmployees)
             {
-                if (employee != null && employee.isHired && !employee.isProcessingOrder)
+                // null 체크 강화
+                if (employee == null || employee.gameObject == null) 
                 {
+                    DebugLog($"null 직원 발견 (스킵)");
+                    continue;
+                }
+                
+                // 작업 위치에 도착했고, 주문 처리 가능한 직원만 선택
+                if (employee.IsHired &&  // isHired -> IsHired (프로퍼티)
+                    employee.IsWorkTime &&
+                    !employee.isProcessingOrder &&
+                    employee.CurrentState == AIEmployee.EmployeeState.Working && // 작업 위치에 도착한 직원만!
+                    employee.workPosition != null) // 작업 위치가 있는지 확인
+                {
+                    validEmployeeCount++;
+                    
                     // 같은 주방에 있는 직원인지 확인
                     if (IsEmployeeInSameKitchen(employee))
                     {
@@ -460,6 +517,14 @@ namespace JY
                                 closestEmployee = employee;
                             }
                         }
+                        else
+                        {
+                            DebugLog($"직원 {employee.employeeName}는 다른 주방에 배정됨");
+                        }
+                    }
+                    else
+                    {
+                        DebugLog($"직원 {employee.employeeName}는 다른 주방에 있음");
                     }
                 }
             }
@@ -468,7 +533,11 @@ namespace JY
             {
                 // 이 주방에 전담 직원으로 배정
                 assignedKitchenEmployee = closestEmployee;
-                DebugLog($"새 전담 직원 배정: {closestEmployee.employeeName} (거리: {closestDistance:F1}m)");
+                DebugLog($"새 전담 직원 배정: {closestEmployee.employeeName} (거리: {closestDistance:F1}m, 사용 가능 직원: {validEmployeeCount}명)", true);
+            }
+            else
+            {
+                DebugLog($"사용 가능한 직원 없음 (검색된 유효 직원: {validEmployeeCount}명)", true);
             }
             
             return closestEmployee;
@@ -507,11 +576,11 @@ namespace JY
         /// <summary>
         /// 디버그 로그
         /// </summary>
-        private void DebugLog(string message)
+        private void DebugLog(string message, bool isImportant = false)
         {
-            if (showDebugLogs)
-            {
-            }
+            if (!showDebugLogs) return;
+            
+            Debug.Log($"[KitchenCounter] {message}");
         }
         
         #endregion

@@ -35,12 +35,12 @@ namespace JY
         
         [Header("스캔 설정")]
         [Tooltip("주방 요소들을 그룹핑할 최대 거리")]
-        [Range(1f, 30f)]
-        [SerializeField] private float maxGroupingDistance = 15f;
+        [Range(1f, 50f)]
+        [SerializeField] private float maxGroupingDistance = 30f;  // 15f → 30f (범위 넓힘)
         
         [Tooltip("주방 인식 범위 확장 (의자 등 주변 요소 포함용)")]
-        [Range(0.5f, 10f)]
-        [SerializeField] private float kitchenBoundsExpansion = 5f;
+        [Range(0.5f, 20f)]
+        [SerializeField] private float kitchenBoundsExpansion = 10f;  // 5f → 10f (범위 넓힘)
         
         [Tooltip("자동 주기적 스캔 활성화")]
         [SerializeField] private bool enablePeriodicScan = true;
@@ -148,7 +148,7 @@ namespace JY
             }
             else
             {
-                DebugLog("⚠️ PlacementSystem을 찾을 수 없습니다!", true);
+                DebugLog("PlacementSystem을 찾을 수 없습니다!", true);
             }
             
             // 초기 스캔 실행
@@ -188,19 +188,19 @@ namespace JY
                 return;
             }
             
-            DebugLog($"🔨 가구 배치 감지: {placedObject.name} (태그: {placedObject.tag}) at {worldPosition}", true);
+            DebugLog($"가구 배치 감지: {placedObject.name} (태그: {placedObject.tag}) at {worldPosition}", true);
             
             // 주방 관련 태그인지 확인
             if (IsKitchenRelatedTag(placedObject.tag))
             {
-                DebugLog($"🍳 주방 요소 배치 감지 확인! {placedObject.name} ({placedObject.tag})", true);
+                DebugLog($"주방 요소 배치 감지 확인! {placedObject.name} ({placedObject.tag})", true);
                 
                 // 약간의 딜레이 후 스캔 (배치 완료 대기)
                 Invoke(nameof(ScanForKitchens), 0.1f);
             }
             else
             {
-                DebugLog($"❌ 주방 관련 태그가 아님: {placedObject.tag} (필요: {KITCHEN_COUNTER_TAG}, {KITCHEN_INDUCTION_TAG}, {KITCHEN_TABLE_TAG})", true);
+                DebugLog($"주방 관련 태그가 아님: {placedObject.tag} (필요: {KITCHEN_COUNTER_TAG}, {KITCHEN_INDUCTION_TAG}, {KITCHEN_TABLE_TAG})", true);
             }
         }
         
@@ -215,19 +215,19 @@ namespace JY
                 return;
             }
             
-            DebugLog($"🗑️ 가구 제거 감지: {removedObject.name} (태그: {removedObject.tag}) at {worldPosition}", true);
+            DebugLog($"가구 제거 감지: {removedObject.name} (태그: {removedObject.tag}) at {worldPosition}", true);
             
             // 주방 관련 태그인지 확인
             if (IsKitchenRelatedTag(removedObject.tag))
             {
-                DebugLog($"🍳 주방 요소 제거 감지 확인! {removedObject.name} ({removedObject.tag})", true);
+                DebugLog($"주방 요소 제거 감지 확인! {removedObject.name} ({removedObject.tag})", true);
                 
                 // 약간의 딜레이 후 스캔 (제거 완료 대기)
                 Invoke(nameof(ScanForKitchens), 0.1f);
             }
             else
             {
-                DebugLog($"❌ 주방 관련 태그가 아님: {removedObject.tag} (필요: {KITCHEN_COUNTER_TAG}, {KITCHEN_INDUCTION_TAG}, {KITCHEN_TABLE_TAG})", true);
+                DebugLog($"주방 관련 태그가 아님: {removedObject.tag} (필요: {KITCHEN_COUNTER_TAG}, {KITCHEN_INDUCTION_TAG}, {KITCHEN_TABLE_TAG})", true);
             }
         }
         
